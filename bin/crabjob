@@ -99,18 +99,14 @@ fi
 
 ongodb=`dirname $0`'/../'`( cat $autosub_db | grep ongoing_db | awk '{print $2}' )`
 if [ ! -f $ongodb ];then
-  echo 'crabjob Error: No ongoingjob.db file'
-  echo $ongodb
-  cat $text1 ; echo
-  exit -1
+  touch $ongodb 
+  echo 'crabjob : No ongoingjob.db file -> void file created !!!!!'
 fi
 
 donedb=`dirname $0`'/../'`( cat $autosub_db | grep donejob_db | awk '{print $2}' )`
-if [ ! -f $ongodb ];then
-  echo 'crabjob Error: No finishedjob.db file'
-  echo $donedb
-  cat $text1 ; echo
-  exit -1
+if [ ! -f $donedb ];then
+  echo 'crabjob : No finishedjob.db file -> void file created !!!!!'
+  touch $donedb
 fi
 
 procinfo=`cat $procdb | grep "$process " | grep " $intag "`
@@ -294,9 +290,13 @@ fi
 
 #echo cfgcmd : $CFGCMD
 
-source ~/.bashrc
+#source ~/.bashrc
+source $VO_CMS_SW_DIR/cmsset_default.sh
+source /user/cmssoft/crab/latest/crab.sh
+
 cd $procdir
-cmseval
+cmsenv 
+cd $workdir
 
 mkcfg $CFGCMD > $cfgfile
 
@@ -310,8 +310,8 @@ fi
 ###################
 
 #ginit
-cd $procdir
-cmseval
+#cd $procdir
+#cmseval
 #if [ $pbs_iihe = 0 ]; then
 #  cd $workdir
 #  gridcrab
