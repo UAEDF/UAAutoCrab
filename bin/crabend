@@ -1,0 +1,139 @@
+#!/bin/sh
+########################################################################
+#
+# author:  Xavier Janssen                                27/11/2009
+# purpose: CRAB job END: Retrieve Finished Job
+#
+########################################################################
+
+### Usage:
+text1=`dirname $0`'/../man/crastat.man'
+
+#if [ $# -lt 1 ]; then
+# cat $text1 ; echo
+# exit -1
+#fi
+
+
+source ~/.bashrc > /dev/null 2> /dev/null
+#ginit > /dev/null 2> /dev/null
+
+
+username=`whoami`
+tmp_file='/tmp/ongocrabjob2.'$username
+tmp_fil2='/tmp/ongocrabjob3.'$username
+tmp_fil3='/tmp/ongocrabjob4.'$username
+touch $tmp_file
+touch $tmp_fil2
+touch $tmp_fil3
+
+###########################
+### Get ongoing jobs DB ###
+###########################
+
+autosub_db=`dirname $0`'/../config/autosub.conf'
+ongoing_db=`dirname $0`'/../'`( cat $autosub_db | grep ongoing_db | awk '{print $2}' )`
+donejob_db=`dirname $0`'/../'`( cat $autosub_db | grep donejob_db | awk '{print $2}' )`
+touch $donejob_db
+
+workdir=$HOME'/'`( cat $autosub_db | grep workdir_crab | awk '{print $2}' )`
+cd $workdir
+
+####################
+## Retrieve Jobs ###
+####################
+
+jobs=`( cat $ongoing_db | grep -v "#" | awk '{print $3":"$4}' )`
+jobdir_crab=$HOME'/'`( cat $autosub_db | grep jobdir_crab | awk '{print $2}' )`
+basedir=$jobdir_crab
+
+####################
+### Loop on Jobs ###
+####################
+
+
+for jobtmp in $jobs ; do
+
+  job=`(echo $jobtmp | awk -F':' '{print $1}')`   
+  type=`(echo $jobtmp | awk -F':' '{print $2}')` 
+
+  rm $tmp_file
+  rm $tmp_fil2
+
+  ####### GET JOB STATUS ######### 
+  
+  if [ $type = "GRID" ]; then
+    crab -status -c $basedir$job > $tmp_file
+  else
+    cd $basedir$job
+    crab -status  > $tmp_file
+    cat $tmp_file
+  fi
+
+  # Set loop separator to end of line
+  BAKIFS=$IFS
+  IFS=$(echo -en "\n\b")
+  exec 3<&0
+  exec 0<"$tmp_file"
+  start=0
+  while read -r line
+  do
+    line2='AA'$line
+    if [ $line2 = 'AA' ];then
+      start=0
+    fi
+    if [ $start = 1 ];then
+      echo $line >> $tmp_fil2
+    fi
+    if [ $line2 = 'AA--------------------------------------------------------------------------------------------' ];then
+      start=1
+    fi  
+  done
+  exec 0<&3
+  # restore $IFS which was used to determine what the field separators are
+  IFS=$BAKIFS
+
+  ####### CHECK JOB STATUS ######### 
+
+  DONE=1
+
+  # Set loop separator to end of line
+  BAKIFS=$IFS
+  IFS=$(echo -en "\n\b")
+  exec 3<&0
+  exec 0<"$tmp_fil2"
+  start=0
+  while read -r line
+  do
+    status_i=`(echo $line | awk '{print $2}')`
+    if [ ! $status_i = "Done" ];then
+      if [ ! $status_i = "Cleared" ];then
+        DONE=0
+      fi
+    fi
+  done
+  exec 0<&3
+  # restore $IFS which was used to determine what the field separators are
+  IFS=$BAKIFS
+
+  ####### RETRIEVE JOB IF DONE #######
+
+  if [ $DONE = 1 ];then
+    echo DONE: $basedir$job
+    if [ $type = "GRID" ]; then
+      crab -getoutput -c $basedir$job
+    else
+      cd $basedir$job
+      crab -getoutput
+    fi      
+
+    jobdata=`(cat $ongoing_db | grep $job)`
+    echo "$jobdata" >> $donejob_db
+    rm $tmp_fil3 
+    cat $ongoing_db | grep -v "$job" > $tmp_fil3
+    mv $tmp_fil3 $ongoing_db
+  else
+    echo ONGOING: $basedir$job
+  fi
+
+done

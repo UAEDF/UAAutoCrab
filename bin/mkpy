@@ -1,0 +1,53 @@
+#!/bin/sh
+########################################################################
+#
+# author:  Xavier Janssen                                27/11/2009
+# purpose: Make python file for cmsRun jobs
+#
+########################################################################
+
+### Usage:
+text1=`dirname $0`'/../man/mkpy.man'
+
+if [ $# -lt 1 ]; then
+ cat $text1 ; echo
+ exit -1
+fi
+
+output_in='undef'
+
+for xopt in $* ; do
+  case $xopt in
+    -h) cat $text1 ; echo ; exit -1 ;;
+    -psetin)  python_infile=$2 ; shift ; shift ;;
+    -psetout) python_outfile=$2 ; shift ; shift ;;
+    -filein)    output_in=$2 ; shift ; shift ;;
+    -fileout)   output_out=$2 ; shift ; shift ;;
+  esac
+done
+
+
+
+# cmsRun script exist ?
+if [ ! -f $python_infile ];then
+  echo 'mkcfg Error: ParameterSet (cmsRun scipt) does not exist:'
+  echo $python_infile
+  cat $text1 ; echo
+  exit -1
+fi
+
+# cmsRun script exist ?
+if [ -f $python_outfile ];then
+  echo 'mkcfg Error: ParameterSet (cmsRun scipt) does exist: Rmove It'
+  echo $python_outfile
+  cat $text1 ; echo
+  exit -1
+fi
+
+### Create file now
+
+cat $python_infile | sed -e "s:$output_in:$output_out:" > $python_outfile
+if [ $?  -ne 0 ]; then
+        exit -1
+fi
+exit 0 

@@ -1,0 +1,342 @@
+#!/bin/sh
+########################################################################
+#
+# author:  Xavier Janssen                                27/11/2009
+# purpose: Create and submit CRAB job 
+#
+########################################################################
+
+### Usage:
+text1=`dirname $0`'/../man/crabjob.man'
+
+if [ $# -lt 1 ]; then
+ cat $text1 ; echo
+ exit -1
+fi
+
+############
+### Init ###
+############
+
+process='undef'
+intag='default'
+datain='undef'
+jsonfile='none'
+runselection=-1
+pbs_iihe=0
+pnfs_iihe=0
+redo=0
+nevt=-1
+pdata=0
+wliihe=0
+
+
+###################
+### READ option ###
+###################
+
+for xopt in $* ; do
+  case $xopt in
+    -h) cat $text1 ; echo ; exit -1 ;;
+    -pbs)   pbs_iihe=1 ; shift ;;
+    -pnfs)  pnfs_iihe=1 ; shift ;;
+    -proc)  process=$2 ; shift ; shift ;;
+    -ptag)  intag=$2 ; shift ; shift ;;
+    -json)  jsonfile=$2 ; shift ; shift ;;
+    -data)  datain=$2 ; shift ; shift ;;
+    -nevt)  nevt=$2 ; shift ; shift ;;
+    -runsel)runselection=$2 ; shift ; shift ;;
+    -redo)  redo=1 ; shift ;;
+    -pdata) pdata=1  ; shift ;;
+    -iihe)  wliihe=1 ; shift ;;
+  esac
+done
+
+### CHECKS
+
+if [ $process = 'undef' ];then
+  echo 'crabjob Error: process not specified'
+  cat $text1 ; echo
+  exit -1
+fi
+
+if [ $datain = 'undef' ];then
+  echo 'crabjob Error: datain not specified'
+  cat $text1 ; echo
+  exit -1
+fi
+
+###########################
+### READ general config ###
+###########################
+
+autosub_db=`dirname $0`'/../config/autosub.conf'
+
+workdir=$HOME'/'`( cat $autosub_db | grep workdir_crab | awk '{print $2}' )`
+cd $workdir
+
+jobdir_crab=$HOME'/'`( cat $autosub_db | grep jobdir_crab | awk '{print $2}' )`
+datadir_local=$HOME'/'`( cat $autosub_db | grep datadir_local | awk '{print $2}' )`
+if [ $pbs_iihe = 0 ];then 
+  pnfs_base=`( cat $autosub_db | grep pnfs_base | awk '{print $2}' )`
+else
+  pnfs_base=`( cat $autosub_db | grep pnfs_bas_pbs | awk '{print $2}' )`
+fi
+datadir_pnfs=`( cat $autosub_db | grep datadir_pnfs | awk '{print $2}' )`
+datadir_local=$HOME'/'`( cat $autosub_db | grep datadir_local | awk '{print $2}' )`
+
+#############################
+### READ Process Database ###
+#############################
+
+procdb=`dirname $0`'/../'`( cat $autosub_db | grep process_db | awk '{print $2}' )`
+if [ ! -f $procdb ];then
+  echo 'crabjob Error: No process.conf file'
+  echo $procdb
+  cat $text1 ; echo
+  exit -1
+fi
+
+ongodb=`dirname $0`'/../'`( cat $autosub_db | grep ongoing_db | awk '{print $2}' )`
+if [ ! -f $ongodb ];then
+  echo 'crabjob Error: No ongoingjob.db file'
+  echo $ongodb
+  cat $text1 ; echo
+  exit -1
+fi
+
+donedb=`dirname $0`'/../'`( cat $autosub_db | grep donejob_db | awk '{print $2}' )`
+if [ ! -f $ongodb ];then
+  echo 'crabjob Error: No finishedjob.db file'
+  echo $donedb
+  cat $text1 ; echo
+  exit -1
+fi
+
+procinfo=`cat $procdb | grep "$process " | grep " $intag "`
+procname=`(echo $procinfo | awk '{print $1}')` 
+proctag=`(echo $procinfo  | awk '{print $2}')`
+cmsswver=`(echo $procinfo | awk '{print $3}')`
+procdir=`(echo $procinfo  | awk '{print $4}')`
+procpyfi=`(echo $procinfo | awk '{print $5}')`
+procoufi=`(echo $procinfo | awk '{print $6}')`
+procpyfi=$procdir/$procpyfi
+procevjob=`(echo $procinfo | awk '{print $7}')`
+
+if [ ! $proctag = "default" ];then
+  procname=$procname'_'$proctag
+fi
+
+### Check if job was already completed once
+
+TEST1=$procname' '$datain
+TEST2=`(cat $donedb | grep "$TEST1" | awk '{print $1" "$2}' | uniq )` 
+if [ -n $X ]; then
+  if [ "$TEST1" = "$TEST2" ];then
+    echo 'crabjob Error: Job is DONE    --> Remove it First'
+    echo $TEST1
+    exit -1
+  fi
+fi
+
+### Check if job is running already
+
+TEST1=$procname' '$datain
+TEST2=`(cat $ongodb | grep "$TEST1" | awk '{print $1" "$2}' | uniq )` 
+if [ -n $X ]; then
+  if [ "$TEST1" = "$TEST2" ];then
+    echo 'crabjob Error: Job is Running --> Kill it First'
+    echo $TEST1
+    exit -1
+  fi
+fi
+
+
+echo Starting the following process:
+echo ------------------------------
+echo 'pbsiihe: '$pbs_iihe
+echo 'name   : '$procname
+echo 'tag    : '$proctag
+echo 'json   : '$jsonfile
+echo 'CMSSW  : '$cmsswver
+echo 'dir    : '$procdir
+echo 'python : '$procpyfi
+echo 'output : '$procoufi
+echo '# evt  : '$nevt 
+echo 'evt/job: '$procevjob
+echo 'runsel : '$runselection
+
+
+if [ ! -d $procdir ];then
+  echo 'crabjob Error: No such directory:'
+  echo $procdir
+  cat $text1 ; echo
+  exit -1
+fi
+
+if [ ! -f $procpyfi ];then
+  echo 'crabjob Error: No such file:'
+  echo $procpyfi
+  cat $text1 ; echo
+  exit -1
+fi
+
+####################
+### READ Data DB ###
+####################
+
+#indata=`dirname $0`'/../db/inputdata.db'
+#nevt=100
+#njob=1
+
+echo 'input  : '$datain
+datain_parsed=` (echo $datain | sed 's:/:__:g' )`
+
+########################### 
+### Create Base Job dir ###
+###########################
+
+jobdir=$jobdir_crab'/'$cmsswver'/'$procname'/'$datain_parsed
+otodir=$jobdir_crab'/'$cmsswver'/'$procname'/'$datain_parsed'/auto'
+uidir=$jobdir_crab'/'$cmsswver'/'$procname'/'$datain_parsed'/ui_'$procname
+if [ $pbs_iihe = 0 ];then
+  uidir2='/'$cmsswver'/'$procname'/'$datain_parsed'/ui_'$procname
+else
+  uidir2='/'$cmsswver'/'$procname'/'$datain_parsed
+fi
+logdir=$jobdir_crab'/'$cmsswver'/'$procname'/'$datain_parsed'/log'
+
+echo 'jobdir : '$jobdir
+
+### Check and clean
+if [ -d $jobdir ];then 
+  if [ $redo = 0 ];then
+    echo 'crabjob Error:  jobdir Exist:'
+    echo $jobdir
+    cat $text1 ; echo
+    exit -1
+  else 
+    # Clean Directory !!!!
+    rm -rf $jobdir
+  fi
+fi
+
+### Make dir
+mkdir -p $jobdir
+mkdir -p $otodir
+if [ $pbs_iihe = 0 ];then
+  mkdir -p $uidir
+fi
+mkdir -p $logdir
+
+#############################
+### Data Output Directory ###
+#############################
+
+if [ $pnfs_iihe = 0 ];then  
+  datdir=$datadir_local'/'$cmsswver'/'$procname'/'$datain_parsed
+  echo 'datdir : '$datdir
+  mkdir -p $datdir
+else
+  datdir=$datadir_pnfs'/'$cmsswver'/'$procname'/'$datain_parsed
+fi
+
+########################
+### Make Python File ###
+########################
+
+psetfile=$otodir'/'$procname'__'$cmsswver$datain_parsed'.py'
+fileout=$procname'__'$cmsswver$datain_parsed'.root'
+
+mkpy -psetin $procpyfi -psetout $psetfile -filein $procoufi -fileout $fileout
+if [ $?  -ne 0 ]; then
+        exit -1
+fi
+
+##################### 
+### Make CFG File ###
+#####################
+ 
+cfgfile=$otodir'/'$procname'__'$cmsswver$datain_parsed'.cfg'
+
+CFGCMD=' -dbsin '$datain' -pset '$psetfile
+if [ ! $jsonfile = 'none' ];then
+   CFGCMD=$CFGCMD' -json '$jsonfile' -ljob 100 -tlumi 10000000000000000'
+#  CFGCMD=$CFGCMD' -json '$jsonfile' -njob 1 -tlumi 10'
+#  CFGCMD=$CFGCMD' -json '$jsonfile' -ljob 10 -tlumi 50'
+fi
+if [ $pbs_iihe = 0 ];then
+  CFGCMD=$CFGCMD' -uidir '$uidir 
+else
+  CFGCMD=$CFGCMD' -pbs'
+fi
+CFGCMD=$CFGCMD' -nevt '$nevt' -evtjob '$procevjob
+if [ $pnfs_iihe = 0 ];then
+  CFGCMD=$CFGCMD' -olocal'
+else
+  CFGCMD=$CFGCMD' -opnfs'
+fi
+
+if [ ! $runselection = -1 ];then
+  CFGCMD=$CFGCMD' -runsel '$runselection
+fi
+
+CFGCMD=$CFGCMD' -outdir '$datdir' -outf '$fileout
+
+if [ $pdata = 1 ];then
+  CFGCMD=$CFGCMD' -pdata'
+fi
+
+
+if [ $wliihe = 1 ];then 
+  CFGCMD=$CFGCMD' -wliihe'
+fi
+
+#echo cfgcmd : $CFGCMD
+
+source ~/.bashrc
+cd $procdir
+cmseval
+
+mkcfg $CFGCMD > $cfgfile
+
+if [ $?  -ne 0 ]; then
+        exit -1
+fi
+
+
+###################
+### SUBMIT NOW ####
+###################
+
+#ginit
+cd $procdir
+cmseval
+#if [ $pbs_iihe = 0 ]; then
+#  cd $workdir
+#  gridcrab
+#else
+#  cd $workdir/$uidir2
+#  pbscrab
+#fi
+crab -create -submit -cfg $cfgfile
+
+if [ $?  -ne 0 ]; then
+        exit -1
+fi
+
+
+if [ $pbs_iihe = 0 ];then
+  INFO='GRID'
+else
+  INFO='PBS'
+fi
+if [ $pnfs_iihe = 0 ];then
+  INFO=$INFO' DISK'
+else
+  INFO=$INFO' PNFS'
+fi
+echo $procname' '$datain' '$uidir2' '$INFO >> $ongodb
+
+###
+exit 0 

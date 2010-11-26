@@ -1,0 +1,11 @@
+Usage: mkpy  -h      Print this help
+             -psetin  <python_infile>   : Standard input script
+             -psetout <python_outfile>  : Output script
+             -filein  <output_in>       : root file name in python_infile
+             -fileout <output_out>      : root file name in python_outfile
+
+author: Xavier Janssen <xavier.janssen@ua.ac.be>
+        November 2009
+
+
+  

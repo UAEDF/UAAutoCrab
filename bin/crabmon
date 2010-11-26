@@ -1,0 +1,1 @@
+xterm -geometry 120x60+50+80 -title CrabMon -n CrabMon -r -e crabmonloop &

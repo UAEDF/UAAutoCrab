@@ -1,0 +1,93 @@
+#!/bin/sh
+########################################################################
+#
+# author:  Xavier Janssen                                27/11/2009
+# purpose: CRAB job sattus
+#
+########################################################################
+
+### Usage:
+text1=`dirname $0`'/../man/crastat.man'
+
+#if [ $# -lt 1 ]; then
+# cat $text1 ; echo
+# exit -1
+#fi
+
+source ~/.bashrc > /dev/null 2> /dev/null
+#ginit > /dev/null 2> /dev/null
+
+username=`whoami`
+tmp_file='/tmp/ongocrabjob.'$username
+touch $tmp_file
+
+###########################
+### Get ongoing jobs DB ###
+###########################
+
+autosub_db=`dirname $0`'/../config/autosub.conf'
+ongoing_db=`dirname $0`'/../'`( cat $autosub_db | grep ongoing_db | awk '{print $2}' )`
+
+workdir=$HOME'/'`( cat $autosub_db | grep workdir_crab | awk '{print $2}' )`
+cd $workdir
+
+####################
+## Retrieve Jobs ###
+####################
+
+jobs=`( cat $ongoing_db | grep -v "#" | awk '{print $3":"$4}' )`
+jobdir_crab=$HOME'/'`( cat $autosub_db | grep jobdir_crab | awk '{print $2}' )`
+basedir=$jobdir_crab
+
+####################
+### Loop on Jobs ###
+####################
+
+echo 'ID     STATUS             E_HOST                               EXE_EXIT_CODE JOB_EXIT_STATUS'
+echo '--------------------------------------------------------------------------------------------'
+
+for jobtmp in $jobs ; do
+
+  job=`(echo $jobtmp | awk -F':' '{print $1}')`   
+  type=`(echo $jobtmp | awk -F':' '{print $2}')` 
+
+  rm $tmp_file
+  #ginit > /dev/null 2> /dev/null
+  if [ $type = "GRID" ]; then
+    crab -status -c $basedir$job   > $tmp_file
+  else
+    cd $basedir$job
+    crab -status  > $tmp_file
+    cat $tmp_file
+  fi
+
+
+  echo $job
+  echo '--------------------------------------------------------------------------------------------'
+
+  # Set loop separator to end of line
+  BAKIFS=$IFS
+  IFS=$(echo -en "\n\b")
+  exec 3<&0
+  exec 0<"$tmp_file"
+  start=0
+  while read -r line
+  do
+    line2='AA'$line
+    if [ $line2 = 'AA' ];then
+      start=0
+    fi
+    if [ $start = 1 ];then
+      echo $line
+    fi
+    if [ $line2 = 'AA--------------------------------------------------------------------------------------------' ];then
+      start=1
+    fi  
+  done
+  exec 0<&3
+  # restore $IFS which was used to determine what the field separators are
+  IFS=$BAKIFS
+
+  echo '--------------------------------------------------------------------------------------------'
+
+done

@@ -1,0 +1,35 @@
+#!/bin/sh
+########################################################################
+#
+# author:  Xavier Janssen                                27/11/2009
+# purpose: Copy files from /nfs $1 dir to $HOME/$2 dir
+#
+########################################################################
+
+pnfsbase='srm://maite.iihe.ac.be:8443'
+
+if [ $# -lt 1 ]; then
+  echo 'Usage: srmget <pnfs_dir> : Get all files in <pnfs_dir> to currend dir'
+  exit -1
+fi
+
+if [ ! -d $1 ]; then
+  echo '<pnfs_dir>  does not exist'
+  exit -1
+fi
+
+
+
+files=`(srmls $pnfsbase$1 | awk '{print $2}' )`
+
+echo $files
+ifile=0
+for file in $files ; do
+  if [ $ifile = 0 ];then
+    ifile=1
+  else
+#    xpwd=`pwd`
+    srmrm $pnfsbase$file 
+  fi
+done
+

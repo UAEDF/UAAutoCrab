@@ -1,0 +1,34 @@
+Usage: mkcfg  -h      Print this help
+              -dbsin  <datasetpath>
+                       DBS Data input, can be skipped for local data 
+                       from cmsRun script 
+              -pset   <ParameterSet>
+                       cmsRun script,   REQUESTED option
+
+              -nevt   <total_number_of_events>
+                       -1: means all
+              -evtjob <events_per_job>
+              -njob   <number_of_jobs>
+              -ljob   <lumis_per_job>
+                       Give at least one among evtjob,njob and ljob  
+
+              -runsel <runlist>   example:1,2,3-4
+
+              -outf   <output_file>     REQUESTED
+              -uidir  <ui_working_dir>  REQUESTED
+              -logdir <logdir>          Optional
+
+              -olocal COPY output to local disk
+              -opnfs  COPY output PNFS 
+              -outdir <outputdir>  
+              -storel <storage_element>
+
+              -addin  <file1>,<file2>,...,<fileN>
+              -pubdbs <publish_data_name>
+                      TO PUBLISH OUTPUT IN DBS !!!!
+
+              -pbs   TO submit on local IIHE queue ONLY   
+              -pdata USE pricate pbs published data DBD database
+
+author: Xavier Janssen <xavier.janssen@ua.ac.be>
+        November 2009

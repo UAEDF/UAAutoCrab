@@ -1,0 +1,334 @@
+#!/bin/sh
+########################################################################
+#
+# author:  Xavier Janssen                                24/11/2009
+# purpose: Make crab cfg file for Grid jobs
+#
+########################################################################
+
+### Usage:
+text1=`dirname $0`'/../man/mkcfg.man' 
+     
+if [ $# -lt 1 ]; then
+ cat $text1 ; echo
+# exit -1 
+fi
+
+###
+
+crabv=`(crab -v | awk '{print $3}' | sed "s:\.::g" )`
+#echo "CRABV: "$crabv
+
+### Basic option (can/should be changed by user)
+
+datasetpath='none'    # Input data: 'DBS path' or 'none' (for local data from python file)
+pset='undef'          # cmsRun scipt
+
+jsonfile='none'
+total_number_of_events=-1
+events_per_job=-1
+number_of_jobs=-1
+total_number_of_lumis=-1
+lumis_per_job=-1
+runselection=-1
+
+output_file='out.root' 
+
+ui_working_dir='undef'
+logdir='default'
+
+return_data=1
+outputdir='default'
+
+copy_data=0
+storage_element=T2_BE_IIHE
+user_remote_dir='undef'
+
+publish_data=0
+publish_data_name='undef'
+dbs_url_for_publication='https://cmsdbsprod.cern.ch:8443/cms_dbs_ph_analysis_02_writer/servlet/DBSServlet' 
+dbs_url_for_publication='http://cmsdbsprod.cern.ch/cms_dbs_ph_analysis_01/servlet/DBSServlet'
+
+
+
+add_in_files='none'
+add_in_files_list='none'
+
+wl_iihe=0
+
+### PBS submit
+
+pbs_iihe=0
+private_data=0
+
+### Generic settings: Stuff that should stay the same for each job 
+
+
+autosub_db=`dirname $0`'/../config/autosub.conf'
+server_name=`( cat $autosub_db | grep crab_server | awk '{print $2}' )`
+eMail=`( cat $autosub_db | grep eMail | awk '{print $2}' )`
+
+
+jobtype='cmssw'
+scheduler='glite'
+#server_name='bari'
+
+#eMail='Xavier.Janssen@ua.ac.be'
+thresholdLevel=100
+username=`whoami`
+
+
+###################
+### GET options ###
+###################
+
+
+for xopt in $* ; do
+  case $xopt in
+    -h) cat $text1 ; echo ; exit -1 ;;
+    -dbsin) datasetpath=$2 ; shift ; shift ;;
+    -pset)  pset=$2 ; shift ; shift ;;
+    -nevt)  total_number_of_events=$2 ; shift ; shift ;;
+    -evtjob)events_per_job=$2 ; shift ; shift ;;
+    -njob)  number_of_jobs=$2 ; shift ; shift ;;
+    -json)  jsonfile=$2 ; shift ; shift ;;
+    -tlumi) total_number_of_lumis=$2 ; shift ; shift ;;
+    -ljob)  lumis_per_job=$2 ; shift ; shift ;;
+    -runsel)runselection=$2 ; shift ; shift ;;
+    -outf)  output_file=$2 ; shift ; shift ;;
+    -uidir) ui_working_dir=$2 ; shift ; shift ;;
+    -logdir)logdir=$2 ; shift ; shift ;;
+    -olocal)return_data=1 ; copy_data=0 ; shift ;; 
+    -opnfs) return_data=0 ; copy_data=1 ; shift ;; 
+    -outdir)outputdir=$2 ; user_remote_dir=$2 ; shift ; shift ;;
+    -storel)storage_element=$2 ; shift ; shift ;;
+    -addin) add_in_files='yes' ; add_in_files_list=$2 ; shift ; shift ;;
+    -pubdbs)publish_data=1 ; publish_data_name=$2 ; shift ; shift ;;
+    -pbs)   pbs_iihe=1 shift ;;
+    -pdata) private_data=1 shift ;;
+    -wliihe)wl_iihe=1 shift ;;
+  esac
+done
+
+### Local PBS @ IIHE
+if [ $pbs_iihe = 1 ];then
+    scheduler='pbs'
+    storage_element='maite.iihe.ac.be'
+fi
+
+######################
+### Basic x-checks ###
+######################
+
+# cmsRun script given ?
+if [ $pset = 'undef' ];then
+  echo 'mkcfg Error: ParameterSet (cmsRun scipt) not specified'
+  cat $text1 ; echo
+  exit -1
+fi
+ 
+# cmsRun script exist ?
+if [ ! -f $pset ];then
+  echo 'mkcfg Error: ParameterSet (cmsRun scipt) does not exist:'
+  echo $pset
+  cat $text1 ; echo
+  exit -1
+fi
+
+# At least one of events_per_job / number_of_jobs / lumis_per_job defined ?
+if [ $events_per_job = -1 ];then
+if [ $number_of_jobs = -1 ];then
+if [  $lumis_per_job = -1 ];then
+  echo 'mkcfg Error: events_per_job / number_of_jobs / lumis_per_job defined ?'
+  cat $text1 ; echo
+  exit -1
+fi
+fi
+fi
+
+# cmsRun script given ?
+if [ $pbs_iihe = 0 ];then
+ if [ $ui_working_dir = 'undef' ];then
+  echo 'mkcfg Error: ui_working_dir not specified'
+  cat $text1 ; echo
+  exit -1
+ fi
+fi
+
+# PNFS out dir check
+
+if [ $copy_data = 1 ];then
+  if [ $outputdir = 'default' ];then
+    echo 'mkcfg Error: PNFS directory not specified'
+    cat $text1 ; echo
+    exit -1
+  fi
+fi
+
+# PUBLICATION of data checks
+
+if [ $publish_data = 1 ];then
+  if [ $publish_data_name = 'undef' ];then
+    echo 'mkcfg Error: DBS publish_data_name not specified'
+    cat $text1 ; echo
+    exit -1
+  fi
+fi
+
+
+############################
+### Make [CRAB] section ####
+############################
+
+echo '[CRAB]'
+echo
+
+echo 'jobtype                  = '$jobtype
+echo 'scheduler                = '$scheduler
+if [ $crabv -lt "271" ]; then
+ if [ $pbs_iihe = 0 ];then
+   echo 'server_name              = '$server_name
+ fi
+ echo 
+else
+ echo 'use_server               = 1 '
+ echo
+fi
+
+### Make [CMSSW] section
+
+echo '[CMSSW]'
+echo
+echo 'datasetpath              = '$datasetpath
+if [ $private_data = 1 ];then 
+  echo 'dbs_url                  = '$dbs_url_for_publication
+fi
+echo 'pset                     = '$pset
+echo 'total_number_of_events   = '$total_number_of_events
+if [ ! $jsonfile = 'none' ];then
+  echo 'lumi_mask                = '$jsonfile
+fi
+
+if [ ! $events_per_job = -1 ];then
+  echo 'events_per_job           = '$events_per_job
+fi
+if [ ! $number_of_jobs = -1 ];then
+  echo 'number_of_jobs           = '$number_of_jobs
+fi
+if [ ! $total_number_of_lumis = -1 ];then
+  echo 'total_number_of_lumis    = '$total_number_of_lumis
+fi
+if [ ! $lumis_per_job = -1 ];then
+  echo 'lumis_per_job            = '$lumis_per_job
+fi
+
+if [ ! $runselection = -1 ];then
+  echo 'runselection             = '$runselection 
+fi
+
+echo 'output_file              = '$output_file
+
+
+
+### Make [USER] section
+
+echo
+echo [USER]
+echo
+if [ $pbs_iihe = 0 ];then
+  echo 'eMail                    = '$eMail
+  echo 'thresholdLevel           ='$thresholdLevel
+  echo 'ui_working_dir           ='$ui_working_dir
+else
+  echo 'copycommand              = cmscp'
+  echo 'use_central_bossDB       = 0'
+  echo 'use_boss_rt              = 0'
+fi
+if [ ! $logdir = 'default' ];then
+  echo 'logdir                   = '$logdir
+fi
+
+#... Data storage section: Local directory
+if [ $return_data = 1 ];then
+  echo 'return_data              = 1'
+  if [ ! $outputdir = 'default' ];then
+    echo 'outputdir                = '$outputdir
+  fi 
+else
+  echo 'return_data              = 0'
+fi
+
+#... Data storage section: PNFS 
+if [ $copy_data = 1 ];then
+  echo 'copy_data                = 1'
+  echo 'storage_element          = '$storage_element
+  if [ $pbs_iihe = 0 ];then
+    echo 'user_remote_dir          = '$outputdir
+  else
+    echo 'storage_path             = /pnfs/iihe/cms/store/user/'$username'/'$outputdir
+    echo 'copyCommand              = cmscp'
+  fi
+fi
+echo
+
+#... Data publication in DBS
+
+if [ publish_data = 1 ];then 
+  echo 'publish_data               = 1'
+  echo 'publish_data_name          = '$publish_data_name
+  echo 'dbs_url_for_publication    = '$dbs_url_for_publication 
+fi
+
+#... Optional input files
+if [ ! $add_in_files = 'none' ];then
+  echo 'additional_input_files     = '$add_in_files_list
+fi
+
+echo
+
+### Make [GRID] section
+
+echo '[GRID]'
+echo 'rb                       = CERN'
+if [ $pbs_iihe = 0 ];then
+   echo 'proxy_server             = myproxy.cern.ch'
+#  echo 'proxy_server             = mp.iihe.ac.be'
+   echo 'dont_check_proxy =  1'
+fi
+echo 'virtual_organization     = cms'
+echo 'group                    = becms'
+if [ $pbs_iihe = 0 ];then
+  echo 'retry_count              = 0'
+  echo 'lcg_catalog_type = lfc'
+  echo 'lfc_host = lfc-cms-test.cern.ch'
+  echo 'lfc_home = /grid/cms'
+  if [ $wl_iihe = 1 ];then
+    echo 'ce_white_list            = iihe'
+  fi
+else
+  echo 'ce_white_list            = iihe'
+  echo 'maxtarballsize           = 99999'
+fi 
+echo
+
+# echo 'ce_black_list            = T2_US_Florida'
+# echo 'ce_black_list            = T2_FR_IPHC'
+
+##########################
+### Make [PBS] Section ###
+##########################
+
+if [ $pbs_iihe = 1 ];then
+  echo '[PBS]'
+  echo 'server                   = gridce.wn.iihe.ac.be'
+  echo 'queue                    = localgrid'
+  echo 'cp_command               = cp'
+  echo 'rfio_server              = /localgrid/'$username'/'
+  echo 'use_proxy                = 1'
+  echo 'middleware               = LCG'
+fi
+
+### EXIT
+
+exit 0
+

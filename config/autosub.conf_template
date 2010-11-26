@@ -1,0 +1,31 @@
+
+# User Info
+
+eMail           xavier.janssen@ua.ac.be
+
+# Directories: (relative to home directory or pnfs base )
+
+jobdir_crab     autosub/workdir
+datadir_local   data
+pnfs_base       srm://maite.iihe.ac.be:8443/pnfs/iihe/cms/store/user/xjanssen
+pnfs_bas_pbs    pbs
+datadir_pnfs    data
+workdir_crab    autosub/workdir
+
+# Database
+
+process_db      config/process.conf 
+datfile_db      jobdb/datafile.db
+ongoing_db      jobdb/ongoingjob.db
+donejob_db      jobdb/finishedjob.db
+
+# CRAB server
+
+crab_server     cern
+
+# SE default
+
+storage_element T2_BE_IIHE
+storage_elm_pbs maite.iihe.ac.be
+dbs_url_for_pub https://cmsdbsprod.cern.ch:8443/cms_dbs_ph_analysis_02_writer/servlet/DBSServlet
+

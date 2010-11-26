@@ -1,0 +1,20 @@
+
+Usage: crabjob -h      Print this help
+
+               -pbs              Send job to PBS at IIHE 
+               -pnfs             Store output on PNFS
+               -proc <proc> 
+               -ptag <tag>
+               -data <DBSref>
+               -nevt <#evt>      To limit the number of evt
+               -redo
+               -runsel <runlist>
+
+Submit 1 job to crab server or local IIHE pbs queue
+
+author: Xavier Janssen <xavier.janssen@ua.ac.be>
+        November 2009
+
+
+
+

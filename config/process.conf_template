@@ -1,0 +1,12 @@
+# Config for process to be launched 
+# ---------------------------------
+# 
+#Process      ProcTag    CMSSW_ver       Directory                                                     CmsRUn_Script             File_out          Nevt/job  
+#
+# ... 362
+#
+DataCopy      36x         CMSSW_3_6_2         /user/xjanssen/cms/MinBias/CMSSW_3_6_2/src/DataCopy              copy_auto.py                 cmsdata.root         5000  
+ChPartTree    36x_d900    CMSSW_3_6_2         /user/xjanssen/cms/MinBias/CMSSW_3_6_2/src/UAmulti/ChPartTree    test/chparttree_data.py      ChPartTree.root        -1
+ChPartTree    36x_d7000   CMSSW_3_6_2         /user/xjanssen/cms/MinBias/CMSSW_3_6_2/src/UAmulti/ChPartTree    test/chparttree_data.py      ChPartTree.root        -1
+ChPartTree    36x_mc900   CMSSW_3_6_2         /user/xjanssen/cms/MinBias/CMSSW_3_6_2/src/UAmulti/ChPartTree    test/chparttree_mc900.py     ChPartTree.root     50000
+ChPartTree    36x_mc7000  CMSSW_3_6_2         /user/xjanssen/cms/MinBias/CMSSW_3_6_2/src/UAmulti/ChPartTree    test/chparttree_mc.py        ChPartTree.root     50000
