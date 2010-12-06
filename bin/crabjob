@@ -29,7 +29,7 @@ redo=0
 nevt=-1
 pdata=0
 wliihe=0
-
+globaltag='undef'
 
 ###################
 ### READ option ###
@@ -49,6 +49,7 @@ for xopt in $* ; do
     -redo)  redo=1 ; shift ;;
     -pdata) pdata=1  ; shift ;;
     -iihe)  wliihe=1 ; shift ;;
+    -gt)    globaltag=$2 ; shift ;;
   esac
 done
 
@@ -118,6 +119,11 @@ procpyfi=`(echo $procinfo | awk '{print $5}')`
 procoufi=`(echo $procinfo | awk '{print $6}')`
 procpyfi=$procdir/$procpyfi
 procevjob=`(echo $procinfo | awk '{print $7}')`
+procgt=`(echo $procinfo | awk '{print $8}')`
+
+if [ `echo $procinfo | awk '{print NF}'` -gt 7 ];then
+  globaltag=$procgt
+fi
 
 if [ ! $proctag = "default" ];then
   procname=$procname'_'$proctag
@@ -161,6 +167,7 @@ echo 'output : '$procoufi
 echo '# evt  : '$nevt 
 echo 'evt/job: '$procevjob
 echo 'runsel : '$runselection
+echo 'GT     : '$globaltag
 
 
 if [ ! -d $procdir ];then
@@ -243,8 +250,7 @@ fi
 
 psetfile=$otodir'/'$procname'__'$cmsswver$datain_parsed'.py'
 fileout=$procname'__'$cmsswver$datain_parsed'.root'
-
-mkpy -psetin $procpyfi -psetout $psetfile -filein $procoufi -fileout $fileout
+mkpy -psetin $procpyfi -psetout $psetfile -filein $procoufi -fileout $fileout -globaltag $globaltag
 if [ $?  -ne 0 ]; then
         exit -1
 fi

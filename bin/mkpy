@@ -23,6 +23,7 @@ for xopt in $* ; do
     -psetout) python_outfile=$2 ; shift ; shift ;;
     -filein)    output_in=$2 ; shift ; shift ;;
     -fileout)   output_out=$2 ; shift ; shift ;;
+    -globaltag)   gt=$2 ; shift ; shift ;;
   esac
 done
 
@@ -30,7 +31,7 @@ done
 
 # cmsRun script exist ?
 if [ ! -f $python_infile ];then
-  echo 'mkcfg Error: ParameterSet (cmsRun scipt) does not exist:'
+  echo 'mkpy Error: ParameterSet (cmsRun scipt) does not exist:'
   echo $python_infile
   cat $text1 ; echo
   exit -1
@@ -38,7 +39,7 @@ fi
 
 # cmsRun script exist ?
 if [ -f $python_outfile ];then
-  echo 'mkcfg Error: ParameterSet (cmsRun scipt) does exist: Rmove It'
+  echo 'mkpy Error: ParameterSet (cmsRun scipt) does exist: Remove It'
   echo $python_outfile
   cat $text1 ; echo
   exit -1
@@ -46,7 +47,22 @@ fi
 
 ### Create file now
 
-cat $python_infile | sed -e "s:$output_in:$output_out:" > $python_outfile
+cat $python_infile | sed -e "s:$output_in:$output_out:" > tmp.py
+#cat tmp.py | sed "s:process.GlobalTag.globaltag*:process.GlobalTag.globaltag= '$gt::All'" > tmp2.py
+
+#cat tmp.py |grep 'process.GlobalTag.globaltag' | grep -v '\#process.GlobalTag.globaltag' | awk '{print $3}'
+
+if [ "$gt" = "undef" ];then
+  echo
+  echo 'mkpy Warning : No Global Tags  specified, will use the one in the file ==>' `cat tmp.py |grep 'process.GlobalTag.globaltag' | grep -v '\#process.GlobalTag.globaltag' | awk '{print $3}'`
+  echo
+  mv tmp.py $python_outfile
+else 
+  cat tmp.py | sed "s/^.*process.GlobalTag.globaltag.*$/process.GlobalTag.globaltag= '$gt::All'/" > tmp2.py
+  mv tmp2.py $python_outfile
+  rm -f tmp.py
+fi
+
 if [ $?  -ne 0 ]; then
         exit -1
 fi
