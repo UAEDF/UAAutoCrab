@@ -205,8 +205,10 @@ echo
 echo 'datasetpath              = '$datasetpath
 if [ $dbs = 1 ];then 
   echo 'dbs_url                  = '$dbs_url_src             
-else if [ $private_data = 1 ];then
-  echo 'dbs_url                  = '$dbs_url_pdata
+else
+ if [ $private_data = 1 ];then
+  echo 'dbs_url                  = '$dbs_url_for_pdata
+ fi
 fi
 
 
