@@ -47,7 +47,7 @@ user_remote_dir='undef'
 publish_data=0
 publish_data_name='undef'
 dbs_url_for_publication='https://cmsdbsprod.cern.ch:8443/cms_dbs_ph_analysis_02_writer/servlet/DBSServlet' 
-dbs_url_for_publication='http://cmsdbsprod.cern.ch/cms_dbs_ph_analysis_01/servlet/DBSServlet'
+dbs_url_for_pdata='http://cmsdbsprod.cern.ch/cms_dbs_ph_analysis_02/servlet/DBSServlet'
 
 
 
@@ -55,6 +55,8 @@ add_in_files='none'
 add_in_files_list='none'
 
 wl_iihe=0
+
+dbs=0
 
 ### PBS submit
 
@@ -104,9 +106,10 @@ for xopt in $* ; do
     -storel)storage_element=$2 ; shift ; shift ;;
     -addin) add_in_files='yes' ; add_in_files_list=$2 ; shift ; shift ;;
     -pubdbs)publish_data=1 ; publish_data_name=$2 ; shift ; shift ;;
-    -pbs)   pbs_iihe=1 shift ;;
-    -pdata) private_data=1 shift ;;
-    -wliihe)wl_iihe=1 shift ;;
+    -pbs)   pbs_iihe=1 ; shift ;;
+    -pdata) private_data=1 ; shift ;;
+    -dbs)   dbs=1 ; dbs_url_src=$2 ; shift ; shift ;;
+    -wliihe)wl_iihe=1 ; shift ;;
   esac
 done
 
@@ -200,9 +203,13 @@ fi
 echo '[CMSSW]'
 echo
 echo 'datasetpath              = '$datasetpath
-if [ $private_data = 1 ];then 
-  echo 'dbs_url                  = '$dbs_url_for_publication
+if [ $dbs = 1 ];then 
+  echo 'dbs_url                  = '$dbs_url_src             
+else if [ $private_data = 1 ];then
+  echo 'dbs_url                  = '$dbs_url_pdata
 fi
+
+
 echo 'pset                     = '$pset
 echo 'total_number_of_events   = '$total_number_of_events
 if [ ! $jsonfile = 'none' ];then

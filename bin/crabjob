@@ -29,6 +29,7 @@ redo=0
 nevt=-1
 pdata=0
 wliihe=0
+dbs=0
 globaltag='undef'
 
 ###################
@@ -49,7 +50,8 @@ for xopt in $* ; do
     -redo)  redo=1 ; shift ;;
     -pdata) pdata=1  ; shift ;;
     -iihe)  wliihe=1 ; shift ;;
-    -gt)    globaltag=$2 ; shift ;;
+    -dbs)   dbs=1 ; dbs_url_src=$2 ; shift ; shift ;; 
+    -gt)    globaltag=$2 ; shift ; shift ;;
   esac
 done
 
@@ -293,6 +295,11 @@ fi
 if [ $wliihe = 1 ];then 
   CFGCMD=$CFGCMD' -wliihe'
 fi
+
+if [ $dbs = 1 ];then
+  CFGCMD=$CFGCMD' -dbs '$dbs_url_src
+fi
+
 
 #echo cfgcmd : $CFGCMD
 
