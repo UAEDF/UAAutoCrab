@@ -123,9 +123,9 @@ procpyfi=$procdir/$procpyfi
 procevjob=`(echo $procinfo | awk '{print $7}')`
 procgt=`(echo $procinfo | awk '{print $8}')`
 
-if [ `echo $procinfo | awk '{print NF}'` -gt 7 ];then
-  globaltag=$procgt
-fi
+#if [ `echo $procinfo | awk '{print NF}'` -gt 7 ];then
+#  globaltag=$procgt
+#fi
 
 if [ ! $proctag = "default" ];then
   procname=$procname'_'$proctag
