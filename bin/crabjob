@@ -265,8 +265,8 @@ cfgfile=$otodir'/'$procname'__'$cmsswver$datain_parsed'.cfg'
 
 CFGCMD=' -dbsin '$datain' -pset '$psetfile
 if [ ! $jsonfile = 'none' ];then
-   CFGCMD=$CFGCMD' -json '$jsonfile' -ljob 100 -tlumi 10000000000000000'
-#  CFGCMD=$CFGCMD' -json '$jsonfile' -njob 1 -tlumi 10'
+#  CFGCMD=$CFGCMD' -json '$jsonfile' -ljob 100 -tlumi 10000000000000000'
+   CFGCMD=$CFGCMD' -json '$jsonfile' -njob 1 -tlumi 10'
 #  CFGCMD=$CFGCMD' -json '$jsonfile' -ljob 10 -tlumi 50'
 fi
 if [ $pbs_iihe = 0 ];then
