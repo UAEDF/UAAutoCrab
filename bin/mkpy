@@ -54,7 +54,7 @@ cat $python_infile | sed -e "s:$output_in:$output_out:" > tmp.py
 
 if [ "$gt" = "undef" ];then
   echo
-  echo 'mkpy Warning : No Global Tags  specified, will use the one in the file ==>' `cat tmp.py |grep 'process.GlobalTag.globaltag' | grep -v '\#process.GlobalTag.globaltag' | awk '{print $3}'`
+  echo '[mkpy] Warning : No Global Tags  specified, will use the one in the file ==>' `cat tmp.py |grep 'process.GlobalTag.globaltag' | grep -v '\#process.GlobalTag.globaltag' | awk '{print $3}'`
   echo
   mv tmp.py $python_outfile
 else 
