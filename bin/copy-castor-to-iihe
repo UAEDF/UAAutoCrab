@@ -1,0 +1,43 @@
+#!/bin/sh
+
+if [ $# -ne 1 ];then
+  echo 'Will copy entire castor directory containing files to iihe pnfs. Is not recursive !'
+  echo 'Usage : copy-castor-to-iihe <castordir>'
+  echo '<castordir>  : needs to be like /castor/cern.ch/..../MyUserName/dir1/dir2'
+fi
+
+lcgdir=$1
+if [ `echo $1|grep 'srm://' -c` -eq 0 ];then
+  lcgdir='srm://srm-cms.cern.ch:8443'$1
+fi
+
+#basedir=$(echo $lcgdir | sed "s#^.*`whoami`/##")
+basedir=${lcgdir#*/rougny/}
+
+#not needed : already builtin in lcg-cp
+#if [ ! -d /pnfs/iihe/cms/store/user/`whoami`/$basedir ];then
+#  mkdir -p /pnfs/iihe/cms/store/user/`whoami`/$basedir
+#fi
+
+
+#######################################################
+#  stripping not necessay, but keep code just in case #
+#######################################################
+
+#dir_to_make=$basedir
+#while [ `expr length dir_to_make` -ne 0 ];do
+#  dir=$(echo $dir_to_make | sed "s#/.*##")
+#  dir_to_make=$(echo $dir_to_make | sed "s#$dir/##")
+#  
+#  echo $dir_to_make
+#  if [ ! -d /pnfs/iihe/cms/store/user/`whoami`/$dir ];then
+#    mkdir 
+#  fi
+# echo $(lcg-ls srm://maite.iihe.ac.be:8443/pnfs/iihe/cms/store/user/`whoami`/$dir)
+#done
+
+
+for file in `lcg-ls $lcgdir`;do 
+  barefilename=$(echo $file | sed "s#^.*/##")
+  lcg-cp -v srm://srm-cms.cern.ch:8443$file srm://maite.iihe.ac.be:8443/pnfs/iihe/cms/store/user/`whoami`/$basedir/$barefilename
+done
