@@ -31,6 +31,7 @@ pdata=0
 wliihe=0
 dbs=0
 globaltag='undef'
+cebl=0
 caf=0
 dbs_url_src='none'
 
@@ -54,6 +55,7 @@ for xopt in $* ; do
     -iihe)  wliihe=1 ; shift ;;
     -dbs)   dbs=1 ; dbs_url_src=$2 ; shift ; shift ;; 
     -gt)    globaltag=$2 ; shift ; shift ;;
+    -cebl)  cebl=1 ; ce_blacklist=$2 ; shift ; shift ;;
     -caf)   caf=1 ; shift ;;
   esac
 done
@@ -194,6 +196,9 @@ echo 'evt/job: '$procevjob
 echo 'runsel : '$runselection
 echo 'GT     : '$globaltag
 echo 'dbs    : '$dbs_url_src
+if [ $cebl = 1 ];then
+  echo 'CE bl  : '$ce_blacklist
+fi
 if [ $caf = 1 ];then
   echo 'CAF    : using adequate parameters. Output files will be on Castor ...'
 fi
@@ -294,7 +299,7 @@ cfgfile=$otodir'/'$procname'__'$cmsswver$datain_parsed'.cfg'
 CFGCMD=' -dbsin '$datain' -pset '$psetfile
 if [ ! $jsonfile = 'none' ];then
   CFGCMD=$CFGCMD' -json '$jsonfile' -ljob 100 -tlumi 10000000000000000'
-#   CFGCMD=$CFGCMD' -json '$jsonfile' -njob 1 -tlumi 10'
+#  CFGCMD=$CFGCMD' -json '$jsonfile' -njob 1 -tlumi 10'
 #  CFGCMD=$CFGCMD' -json '$jsonfile' -ljob 10 -tlumi 50'
 fi
 if [ $pbs_iihe = 0 ];then
@@ -328,6 +333,11 @@ if [ $dbs = 1 ];then
   CFGCMD=$CFGCMD' -dbs '$dbs_url_src
 fi
 
+if [ $cebl=1 ];then
+  CFGCMD=$CFGCMD' -cebl '$ce_blacklist
+fi
+
+
 if [ $caf = 1 ];then
   CFGCMD=$CFGCMD' -caf'
 fi
@@ -335,7 +345,6 @@ fi
  
 #echo cfgcmd : $CFGCMD
 
-#source ~/.bashrc
 if [ `uname -a | grep lxplus | wc -l` -eq 1 ];then
   echo "Setting lxplus environment"
   source /afs/cern.ch/cms/LCG/LCG-2/UI/cms_ui_env.sh 
@@ -345,6 +354,7 @@ else
     echo "Setting iihe environment"
     source $VO_CMS_SW_DIR/cmsset_default.sh
     source /user/cmssoft/crab/latest/crab.sh
+    #source /user/cmssoft/crab/CRAB_2_7_7_patch1/crab.sh
   else
     echo "Warning , don't know were you are, crab and correct cms environment will need to be correct before starting crabjob."
   fi
@@ -352,6 +362,7 @@ fi
 
 cd $procdir
 eval `scramv1 runtime -sh` # = cmsenv , but compatible with lxplus  
+
 cd $workdir
 
 mkcfg $CFGCMD > $cfgfile
