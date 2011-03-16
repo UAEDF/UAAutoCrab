@@ -31,6 +31,8 @@ pdata=0
 wliihe=0
 dbs=0
 globaltag='undef'
+caf=0
+dbs_url_src='none'
 
 ###################
 ### READ option ###
@@ -52,22 +54,43 @@ for xopt in $* ; do
     -iihe)  wliihe=1 ; shift ;;
     -dbs)   dbs=1 ; dbs_url_src=$2 ; shift ; shift ;; 
     -gt)    globaltag=$2 ; shift ; shift ;;
+    -caf)   caf=1 ; shift ;;
   esac
 done
 
 ### CHECKS
 
 if [ $process = 'undef' ];then
-  echo 'crabjob Error: process not specified'
+  echo '[crabjob] Error: process not specified'
   cat $text1 ; echo
   exit -1
 fi
 
 if [ $datain = 'undef' ];then
-  echo 'crabjob Error: datain not specified'
+  echo '[crabjob] Error: datain not specified'
   cat $text1 ; echo
   exit -1
 fi
+
+if [ $caf -eq 1 ];then
+
+  #exit if not on lxplus
+  if [ `uname -a | grep lxplus | wc -l` -eq 0 ];then
+    echo "[crabjob] Error : option caf available only if on lxplus machine."
+    exit -1
+  fi
+
+  #adapting dbs to caf
+  if [  $dbs -eq 0 ];then
+    #cho 'adapted dbs url for CAF purposes'
+    dbs=1
+    dbs_url_src='http://cmsdbsprod.cern.ch/cms_dbs_caf_analysis_01/servlet/DBSServlet'
+ fi 
+fi
+
+
+echo 
+
 
 ###########################
 ### READ general config ###
@@ -94,7 +117,7 @@ datadir_local=$HOME'/'`( cat $autosub_db | grep datadir_local | awk '{print $2}'
 
 procdb=`dirname $0`'/../'`( cat $autosub_db | grep process_db | awk '{print $2}' )`
 if [ ! -f $procdb ];then
-  echo 'crabjob Error: No process.conf file'
+  echo '[crabjob] Error: No process.conf file'
   echo $procdb
   cat $text1 ; echo
   exit -1
@@ -103,12 +126,12 @@ fi
 ongodb=`dirname $0`'/../'`( cat $autosub_db | grep ongoing_db | awk '{print $2}' )`
 if [ ! -f $ongodb ];then
   touch $ongodb 
-  echo 'crabjob : No ongoingjob.db file -> void file created !!!!!'
+  echo '[crabjob] Warning : No ongoingjob.db file -> void file created !!!!!'
 fi
 
 donedb=`dirname $0`'/../'`( cat $autosub_db | grep donejob_db | awk '{print $2}' )`
 if [ ! -f $donedb ];then
-  echo 'crabjob : No finishedjob.db file -> void file created !!!!!'
+  echo '[crabjob] Warning : No finishedjob.db file -> void file created !!!!!'
   touch $donedb
 fi
 
@@ -137,7 +160,7 @@ TEST1=$procname' '$datain
 TEST2=`(cat $donedb | grep "$TEST1" | awk '{print $1" "$2}' | uniq )` 
 if [ -n $X ]; then
   if [ "$TEST1" = "$TEST2" ];then
-    echo 'crabjob Error: Job is DONE    --> Remove it First'
+    echo '[crabjob] Error: Job is DONE    --> Remove it First'
     echo $TEST1
     exit -1
   fi
@@ -149,7 +172,7 @@ TEST1=$procname' '$datain
 TEST2=`(cat $ongodb | grep "$TEST1" | awk '{print $1" "$2}' | uniq )` 
 if [ -n $X ]; then
   if [ "$TEST1" = "$TEST2" ];then
-    echo 'crabjob Error: Job is Running --> Kill it First'
+    echo '[crabjob] Error: Job is Running --> Kill it First'
     echo $TEST1
     exit -1
   fi
@@ -170,17 +193,22 @@ echo '# evt  : '$nevt
 echo 'evt/job: '$procevjob
 echo 'runsel : '$runselection
 echo 'GT     : '$globaltag
+echo 'dbs    : '$dbs_url_src
+if [ $caf = 1 ];then
+  echo 'CAF    : using adequate parameters. Output files will be on Castor ...'
+fi
+
 
 
 if [ ! -d $procdir ];then
-  echo 'crabjob Error: No such directory:'
+  echo '[crabjob] Error: No such directory:'
   echo $procdir
   cat $text1 ; echo
   exit -1
 fi
 
 if [ ! -f $procpyfi ];then
-  echo 'crabjob Error: No such file:'
+  echo '[crabjob] Error: No such file:'
   echo $procpyfi
   cat $text1 ; echo
   exit -1
@@ -265,8 +293,8 @@ cfgfile=$otodir'/'$procname'__'$cmsswver$datain_parsed'.cfg'
 
 CFGCMD=' -dbsin '$datain' -pset '$psetfile
 if [ ! $jsonfile = 'none' ];then
-#  CFGCMD=$CFGCMD' -json '$jsonfile' -ljob 100 -tlumi 10000000000000000'
-   CFGCMD=$CFGCMD' -json '$jsonfile' -njob 1 -tlumi 10'
+  CFGCMD=$CFGCMD' -json '$jsonfile' -ljob 100 -tlumi 10000000000000000'
+#   CFGCMD=$CFGCMD' -json '$jsonfile' -njob 1 -tlumi 10'
 #  CFGCMD=$CFGCMD' -json '$jsonfile' -ljob 10 -tlumi 50'
 fi
 if [ $pbs_iihe = 0 ];then
@@ -300,15 +328,30 @@ if [ $dbs = 1 ];then
   CFGCMD=$CFGCMD' -dbs '$dbs_url_src
 fi
 
+if [ $caf = 1 ];then
+  CFGCMD=$CFGCMD' -caf'
+fi
 
+ 
 #echo cfgcmd : $CFGCMD
 
 #source ~/.bashrc
-source $VO_CMS_SW_DIR/cmsset_default.sh
-source /user/cmssoft/crab/latest/crab.sh
+if [ `uname -a | grep lxplus | wc -l` -eq 1 ];then
+  echo "Setting lxplus environment"
+  source /afs/cern.ch/cms/LCG/LCG-2/UI/cms_ui_env.sh 
+  source /afs/cern.ch/cms/ccs/wm/scripts/Crab/crab.sh 
+else
+  if [ `uname -a | grep 'iihe.ac.be' | wc -l` -eq 1 ];then
+    echo "Setting iihe environment"
+    source $VO_CMS_SW_DIR/cmsset_default.sh
+    source /user/cmssoft/crab/latest/crab.sh
+  else
+    echo "Warning , don't know were you are, crab and correct cms environment will need to be correct before starting crabjob."
+  fi
+fi
 
 cd $procdir
-cmsenv 
+eval `scramv1 runtime -sh` # = cmsenv , but compatible with lxplus  
 cd $workdir
 
 mkcfg $CFGCMD > $cfgfile
