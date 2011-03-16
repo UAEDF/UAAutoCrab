@@ -57,6 +57,7 @@ add_in_files_list='none'
 wl_iihe=0
 
 dbs=0
+use_server=0
 
 ### PBS submit
 
@@ -78,6 +79,9 @@ scheduler='glite'
 #eMail='Xavier.Janssen@ua.ac.be'
 thresholdLevel=100
 username=`whoami`
+
+#specific to caf submission
+caf=0
 
 
 ###################
@@ -110,6 +114,7 @@ for xopt in $* ; do
     -pdata) private_data=1 ; shift ;;
     -dbs)   dbs=1 ; dbs_url_src=$2 ; shift ; shift ;;
     -wliihe)wl_iihe=1 ; shift ;;
+    -caf)   caf=1 ; shift ;;
   esac
 done
 
@@ -178,6 +183,14 @@ if [ $publish_data = 1 ];then
   fi
 fi
 
+#CAF Changes
+if [ $caf = 1 ];then
+  storage_element=T2_CH_CAF
+  jobtype=cmssw
+  scheduler=caf
+  use_server=0
+fi
+
 
 ############################
 ### Make [CRAB] section ####
@@ -194,7 +207,7 @@ if [ $crabv -lt "271" ]; then
  fi
  echo 
 else
- echo 'use_server               = 1 '
+ echo 'use_server               = '$use_server
  echo
 fi
 
@@ -282,7 +295,7 @@ echo
 
 #... Data publication in DBS
 
-if [ publish_data = 1 ];then 
+if [ $publish_data = 1 ];then 
   echo 'publish_data               = 1'
   echo 'publish_data_name          = '$publish_data_name
   echo 'dbs_url_for_publication    = '$dbs_url_for_publication 
@@ -305,7 +318,11 @@ if [ $pbs_iihe = 0 ];then
    echo 'dont_check_proxy =  1'
 fi
 echo 'virtual_organization     = cms'
-echo 'group                    = becms'
+
+if [ $caf -eq 0 ];then
+  echo 'group                    = becms'
+fi
+
 if [ $pbs_iihe = 0 ];then
   echo 'retry_count              = 0'
   echo 'lcg_catalog_type = lfc'
@@ -315,7 +332,7 @@ if [ $pbs_iihe = 0 ];then
     echo 'ce_white_list            = iihe'
   fi
 else
-  echo 'ce_white_list            = iihe'
+  #echo 'ce_white_list            = iihe'
   echo 'maxtarballsize           = 99999'
 fi 
 echo
@@ -336,6 +353,18 @@ if [ $pbs_iihe = 1 ];then
   echo 'rfio_server              = /localgrid/'$username'/'
   echo 'use_proxy                = 1'
   echo 'middleware               = LCG'
+fi
+
+##########################
+### Make [CAF] Section ###
+##########################
+
+if [ $caf = 1 ];then
+  echo
+  echo '[CAF]'
+  echo
+
+  echo "queue=cmscaf1nh"
 fi
 
 ### EXIT
