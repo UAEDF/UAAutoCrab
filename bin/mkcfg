@@ -76,9 +76,10 @@ jobtype='cmssw'
 scheduler='glite'
 #server_name='bari'
 
-#eMail='Xavier.Janssen@ua.ac.be'
 thresholdLevel=100
 username=`whoami`
+
+cebl=0
 
 #specific to caf submission
 caf=0
@@ -114,6 +115,7 @@ for xopt in $* ; do
     -pdata) private_data=1 ; shift ;;
     -dbs)   dbs=1 ; dbs_url_src=$2 ; shift ; shift ;;
     -wliihe)wl_iihe=1 ; shift ;;
+    -cebl)  cebl=1 ; ce_blacklist=$2 ; shift ; shift ;;
     -caf)   caf=1 ; shift ;;
   esac
 done
@@ -122,6 +124,8 @@ done
 if [ $pbs_iihe = 1 ];then
     scheduler='pbs'
     storage_element='maite.iihe.ac.be'
+    echo 'mkcfg Error: Local PBS @ IIHE not supported !'
+    exit -1
 fi
 
 ######################
@@ -337,9 +341,9 @@ else
 fi 
 echo
 
-# echo 'ce_black_list            = T2_US_Florida'
-# echo 'ce_black_list            = T2_FR_IPHC'
-# echo 'ce_black_list            = T2_ES_IFCA'
+if [ $cebl=1 ];then
+  echo 'ce_black_list            = '$ce_blacklist
+fi
 
 ##########################
 ### Make [PBS] Section ###

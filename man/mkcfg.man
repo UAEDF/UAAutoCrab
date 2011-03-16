@@ -23,12 +23,17 @@ Usage: mkcfg  -h      Print this help
               -outdir <outputdir>  
               -storel <storage_element>
 
+              -cebl   <ce1>,<ce2>,...,<ceN>
+                       Specify a comma-separated list of CE's to blacklist
+
               -addin  <file1>,<file2>,...,<fileN>
               -pubdbs <publish_data_name>
                       TO PUBLISH OUTPUT IN DBS !!!!
 
               -pbs   TO submit on local IIHE queue ONLY   
               -pdata USE pricate pbs published data DBD database
+
+           
 
 author: Xavier Janssen <xavier.janssen@ua.ac.be>
         November 2009
