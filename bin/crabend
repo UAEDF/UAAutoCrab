@@ -106,7 +106,7 @@ for jobtmp in $jobs ; do
   start=0
   while read -r line
   do
-    status_i=`(echo $line | awk '{print $2}')`
+    status_i=`(echo $line | awk '{print $3}')`
     if [ ! $status_i = "Done" ];then
       if [ ! $status_i = "Cleared" ];then
         DONE=0

@@ -35,6 +35,11 @@ cebl=0
 caf=0
 dbs_url_src='none'
 
+iextraname=0
+extraname='NULL'
+extrandir=''
+extrantag=''
+
 ###################
 ### READ option ###
 ###################
@@ -57,6 +62,7 @@ for xopt in $* ; do
     -gt)    globaltag=$2 ; shift ; shift ;;
     -cebl)  cebl=1 ; ce_blacklist=$2 ; shift ; shift ;;
     -caf)   caf=1 ; shift ;;
+    -extnm) iextraname=1 ; extraname=$2 ; shift ; shift ;;
   esac
 done
 
@@ -168,18 +174,6 @@ if [ -n $X ]; then
   fi
 fi
 
-### Check if job is running already
-
-TEST1=$procname' '$datain
-TEST2=`(cat $ongodb | grep "$TEST1" | awk '{print $1" "$2}' | uniq )` 
-if [ -n $X ]; then
-  if [ "$TEST1" = "$TEST2" ];then
-    echo '[crabjob] Error: Job is Running --> Kill it First'
-    echo $TEST1
-    exit -1
-  fi
-fi
-
 
 echo Starting the following process:
 echo ------------------------------
@@ -196,6 +190,11 @@ echo 'evt/job: '$procevjob
 echo 'runsel : '$runselection
 echo 'GT     : '$globaltag
 echo 'dbs    : '$dbs_url_src
+if [ $iextraname = 1 ];then
+  echo 'extnm  : '$extraname
+  extrandir='/'$extraname
+  extrantag='-'$extraname
+fi
 if [ $cebl = 1 ];then
   echo 'CE bl  : '$ce_blacklist
 fi
@@ -234,29 +233,42 @@ datain_parsed=` (echo $datain | sed 's:/:__:g' )`
 ### Create Base Job dir ###
 ###########################
 
-jobdir=$jobdir_crab'/'$cmsswver'/'$procname'/'$datain_parsed
-otodir=$jobdir_crab'/'$cmsswver'/'$procname'/'$datain_parsed'/auto'
-uidir=$jobdir_crab'/'$cmsswver'/'$procname'/'$datain_parsed'/ui_'$procname
+jobdir=$jobdir_crab'/'$cmsswver'/'$procname'/'$datain_parsed$extrandir
+otodir=$jobdir_crab'/'$cmsswver'/'$procname'/'$datain_parsed$extrandir'/auto'
+uidir=$jobdir_crab'/'$cmsswver'/'$procname'/'$datain_parsed$extrandir'/ui_'$procname
 if [ $pbs_iihe = 0 ];then
-  uidir2='/'$cmsswver'/'$procname'/'$datain_parsed'/ui_'$procname
+  uidir2='/'$cmsswver'/'$procname'/'$datain_parsed$extrandir'/ui_'$procname
 else
-  uidir2='/'$cmsswver'/'$procname'/'$datain_parsed
+  uidir2='/'$cmsswver'/'$procname'/'$datain_parsed$extrandir
 fi
-logdir=$jobdir_crab'/'$cmsswver'/'$procname'/'$datain_parsed'/log'
+logdir=$jobdir_crab'/'$cmsswver'/'$procname'/'$datain_parsed$extrandir'/log'
 
 echo 'jobdir : '$jobdir
 
+### Check if job is running already
+
+TEST1=$procname' '$datain' '$uidir2
+TEST2=`(cat $ongodb | grep "$TEST1" | awk '{print $1" "$2" "$3}' | uniq )` 
+if [ -n $X ]; then
+  if [ "$TEST1" = "$TEST2" ];then
+    echo '[crabjob] Error: Job is Running --> Kill it First'
+    echo $TEST1
+    exit -1
+  fi
+fi
+
 ### Check and clean
 if [ -d $jobdir ];then 
-  if [ $redo = 0 ];then
+#  if [ $redo = 0 ];then
     echo 'crabjob Error:  jobdir Exist:'
     echo $jobdir
+    echo "remove it by hand !!! -redo option disabled !!!"
     cat $text1 ; echo
     exit -1
-  else 
+#  else 
     # Clean Directory !!!!
-    rm -rf $jobdir
-  fi
+#    rm -rf $jobdir
+#  fi
 fi
 
 ### Make dir
@@ -272,19 +284,19 @@ mkdir -p $logdir
 #############################
 
 if [ $pnfs_iihe = 0 ];then  
-  datdir=$datadir_local'/'$cmsswver'/'$procname'/'$datain_parsed
+  datdir=$datadir_local'/'$cmsswver'/'$procname'/'$datain_parsed$extrandir
   echo 'datdir : '$datdir
   mkdir -p $datdir
 else
-  datdir=$datadir_pnfs'/'$cmsswver'/'$procname'/'$datain_parsed
+  datdir=$datadir_pnfs'/'$cmsswver'/'$procname'/'$datain_parsed$extrandir
 fi
 
 ########################
 ### Make Python File ###
 ########################
 
-psetfile=$otodir'/'$procname'__'$cmsswver$datain_parsed'.py'
-fileout=$procname'__'$cmsswver$datain_parsed'.root'
+psetfile=$otodir'/'$procname'__'$cmsswver$datain_parsed$extrantag'.py'
+fileout=$procname'__'$cmsswver$datain_parsed$extrantag'.root'
 mkpy -psetin $procpyfi -psetout $psetfile -filein $procoufi -fileout $fileout -globaltag $globaltag
 if [ $?  -ne 0 ]; then
         exit -1
@@ -294,10 +306,11 @@ fi
 ### Make CFG File ###
 #####################
  
-cfgfile=$otodir'/'$procname'__'$cmsswver$datain_parsed'.cfg'
+cfgfile=$otodir'/'$procname'__'$cmsswver$datain_parsed$extrantag'.cfg'
 
 CFGCMD=' -dbsin '$datain' -pset '$psetfile
 if [ ! $jsonfile = 'none' ];then
+  cp $jsonfile $otodir
   CFGCMD=$CFGCMD' -json '$jsonfile' -ljob 100 -tlumi 10000000000000000'
 #  CFGCMD=$CFGCMD' -json '$jsonfile' -njob 1 -tlumi 10'
 #  CFGCMD=$CFGCMD' -json '$jsonfile' -ljob 10 -tlumi 50'
@@ -353,8 +366,8 @@ else
   if [ `uname -a | grep 'iihe.ac.be' | wc -l` -eq 1 ];then
     echo "Setting iihe environment"
     source $VO_CMS_SW_DIR/cmsset_default.sh
-    source /user/cmssoft/crab/latest/crab.sh
-    #source /user/cmssoft/crab/CRAB_2_7_7_patch1/crab.sh
+    #source /user/cmssoft/crab/latest/crab.sh
+    source /user/cmssoft/crab/CRAB_2_7_7_patch1/crab.sh
   else
     echo "Warning , don't know were you are, crab and correct cms environment will need to be correct before starting crabjob."
   fi
@@ -386,6 +399,7 @@ fi
 #  cd $workdir/$uidir2
 #  pbscrab
 #fi
+
 crab -create -submit -cfg $cfgfile
 
 if [ $?  -ne 0 ]; then
