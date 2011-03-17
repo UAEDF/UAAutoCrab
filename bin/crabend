@@ -126,6 +126,7 @@ for jobtmp in $jobs ; do
     else
       cd $basedir$job
       crab -getoutput
+      crab -report
     fi      
 
     jobdata=`(cat $ongoing_db | grep $job)`
