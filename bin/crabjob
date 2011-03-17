@@ -259,16 +259,21 @@ fi
 
 ### Check and clean
 if [ -d $jobdir ];then 
-#  if [ $redo = 0 ];then
-    echo 'crabjob Error:  jobdir Exist:'
+  if [ $redo = 0 ];then
+    echo '[crabjob] Error:  jobdir Exist:'
     echo $jobdir
-    echo "remove it by hand !!! -redo option disabled !!!"
     cat $text1 ; echo
     exit -1
-#  else 
+  else 
     # Clean Directory !!!!
-#    rm -rf $jobdir
-#  fi
+    lockfile=$jobdir_crab'/'$cmsswver'/'$procname'/'$datain_parsed'/.lock_redo'
+    if [ -f $lockfile ] ; then
+      echo "[crabjob] Error:  jobdir locked : can not detele "
+      ls $lockfile
+      exit -1
+    fi
+    rm -rf $jobdir
+  fi
 fi
 
 ### Make dir
@@ -278,6 +283,11 @@ if [ $pbs_iihe = 0 ];then
   mkdir -p $uidir
 fi
 mkdir -p $logdir
+
+### Lock base dir if multiple version (avoid delete via -redo)
+if [ $iextraname = 1 ];then
+  touch $jobdir_crab'/'$cmsswver'/'$procname'/'$datain_parsed'/.lock_redo'
+fi
 
 #############################
 ### Data Output Directory ###
@@ -400,7 +410,7 @@ fi
 #  pbscrab
 #fi
 
-crab -create -submit -cfg $cfgfile
+echo crab -create -submit -cfg $cfgfile
 
 if [ $?  -ne 0 ]; then
         exit -1
