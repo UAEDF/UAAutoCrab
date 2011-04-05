@@ -123,6 +123,7 @@ for jobtmp in $jobs ; do
     echo DONE: $basedir$job
     if [ $type = "GRID" ]; then
       crab -getoutput -c $basedir$job
+      crab -report
     else
       cd $basedir$job
       crab -getoutput
