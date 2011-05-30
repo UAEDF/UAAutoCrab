@@ -57,7 +57,7 @@ add_in_files_list='none'
 wl_iihe=0
 
 dbs=0
-use_server=0
+use_server=1
 
 ### PBS submit
 
@@ -233,15 +233,15 @@ echo 'pset                     = '$pset
 echo 'total_number_of_events   = '$total_number_of_events
 if [ ! $jsonfile = 'none' ];then
   echo 'lumi_mask                = '$jsonfile
-fi
-
-if [ ! $events_per_job = -1 ];then
-  echo 'events_per_job           = '$events_per_job
+else
+  if [ ! $events_per_job = -1 ];then
+    echo 'events_per_job           = '$events_per_job
+  fi
 fi
 if [ ! $number_of_jobs = -1 ];then
   echo 'number_of_jobs           = '$number_of_jobs
 fi
-if [ ! $total_number_of_lumis = -1 ];then
+if [ ! $total_number_of_lumis = -99 ];then
   echo 'total_number_of_lumis    = '$total_number_of_lumis
 fi
 if [ ! $lumis_per_job = -1 ];then
@@ -336,8 +336,12 @@ if [ $pbs_iihe = 0 ];then
     echo 'ce_white_list            = iihe'
   fi
 else
-  #echo 'ce_white_list            = iihe'
+  echo 'ce_white_list            = iihe'
   echo 'maxtarballsize           = 99999'
+  if [ $wl_iihe = 1 ];then
+    echo 'ce_white_list            = iihe'
+  fi
+
 fi 
 echo
 

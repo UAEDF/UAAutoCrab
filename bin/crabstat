@@ -19,6 +19,7 @@ source ~/.bashrc > /dev/null 2> /dev/null
 
 username=`whoami`
 tmp_file='/tmp/ongocrabjob.'$username
+tmp_file2='/tmp/ongocrabjob2.'$username
 touch $tmp_file
 
 ###########################
@@ -65,6 +66,8 @@ for jobtmp in $jobs ; do
   echo $job
   echo '--------------------------------------------------------------------------------------------'
 
+  cp /dev/null $tmp_file2
+
   # Set loop separator to end of line
   BAKIFS=$IFS
   IFS=$(echo -en "\n\b")
@@ -78,7 +81,7 @@ for jobtmp in $jobs ; do
       start=0
     fi
     if [ $start = 1 ];then
-      echo $line
+      echo $line >> $tmp_file2
     fi
     if [ $line2 = 'AA----- --- ----------------- ------------  ---------- ----------- ---------' ];then
 #   if [ $line2 = 'AA--------------------------------------------------------------------------------------------' ];then
@@ -88,6 +91,12 @@ for jobtmp in $jobs ; do
   exec 0<&3
   # restore $IFS which was used to determine what the field separators are
   IFS=$BAKIFS
+
+  nJobs=$(cat $tmp_file2 | grep -v "\-\-" | wc | awk '{print $1}') 
+  echo "Number of jobs = "$nJobs 
+  echo "Number of files= "$(ls "/pnfs/iihe/cms/store/user/$username/data/"$(echo $job | awk -F'/ui' '{print $1}') | wc | awk '{print $1}')
+  cat $tmp_file2 | grep -v "\-\-" | sed "s:......N: N:" | sed "s:......Y: Y:" | sort | uniq -c
+ 
 
   echo '--------------------------------------------------------------------------------------------'
 
