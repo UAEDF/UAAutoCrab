@@ -44,7 +44,7 @@ basedir=$jobdir_crab
 ### Loop on Jobs ###
 ####################
 
-echo 'ID     STATUS             E_HOST                               EXE_EXIT_CODE JOB_EXIT_STATUS'
+#echo 'ID     STATUS             E_HOST                               EXE_EXIT_CODE JOB_EXIT_STATUS'
 echo '--------------------------------------------------------------------------------------------'
 
 for jobtmp in $jobs ; do
@@ -94,7 +94,12 @@ for jobtmp in $jobs ; do
 
   nJobs=$(cat $tmp_file2 | grep -v "\-\-" | wc | awk '{print $1}') 
   echo "Number of jobs = "$nJobs 
-  echo "Number of files= "$(ls "/pnfs/iihe/cms/store/user/$username/data/"$(echo $job | awk -F'/ui' '{print $1}') | wc | awk '{print $1}')
+  nFiles=0
+  DIRECTORY=$(echo "/pnfs/iihe/cms/store/user/$username/data/"$(echo $job | awk -F'/ui' '{print $1}'))
+  if [ -d "$DIRECTORY" ]; then 
+    nFiles=$(ls "/pnfs/iihe/cms/store/user/$username/data/"$(echo $job | awk -F'/ui' '{print $1}') | wc | awk '{print $1}')
+  fi
+  echo "Number of files= "$nFiles
   cat $tmp_file2 | grep -v "\-\-" | sed "s:......N: N:" | sed "s:......Y: Y:" | sort | uniq -c
  
 

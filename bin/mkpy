@@ -15,6 +15,8 @@ if [ $# -lt 1 ]; then
 fi
 
 output_in='undef'
+gt='undef'
+sed='undef'
 
 for xopt in $* ; do
   case $xopt in
@@ -24,6 +26,7 @@ for xopt in $* ; do
     -filein)    output_in=$2 ; shift ; shift ;;
     -fileout)   output_out=$2 ; shift ; shift ;;
     -globaltag)   gt=$2 ; shift ; shift ;;
+    -sed)       sed=$2 ; shift ; shift ;;
   esac
 done
 
@@ -60,6 +63,15 @@ if [ "$gt" = "undef" ];then
 else 
   cat tmp.py | sed "s/^.*process.GlobalTag.globaltag.*$/process.GlobalTag.globaltag= '$gt::All'/" > tmp2.py
   mv tmp2.py $python_outfile
+  rm -f tmp.py
+fi
+
+if [ "$sed" = "undef" ];then
+  echo "no sed command"
+else
+  mv $python_outfile tmp.py
+  echo 'executing sed "'$sed'"'
+  cat tmp.py | sed "$sed" > $python_outfile
   rm -f tmp.py
 fi
 

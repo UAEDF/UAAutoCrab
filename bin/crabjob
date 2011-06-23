@@ -31,6 +31,7 @@ pdata=0
 wliihe=0
 dbs=0
 globaltag='undef'
+sedpy='undef'
 cebl=0
 caf=0
 dbs_url_src='none'
@@ -63,6 +64,7 @@ for xopt in $* ; do
     -cebl)  cebl=1 ; ce_blacklist=$2 ; shift ; shift ;;
     -caf)   caf=1 ; shift ;;
     -extnm) iextraname=1 ; extraname=$2 ; shift ; shift ;;
+    -sedpy) sedpy=$2 ; shift ; shift ;; 
   esac
 done
 
@@ -165,7 +167,7 @@ fi
 ### Check if job was already completed once
 
 TEST1=$procname' '$datain
-TEST2=`(cat $donedb | grep "$TEST1" | awk '{print $1" "$2}' | uniq )` 
+TEST2=`(cat $donedb | grep "$TEST1" | awk '{print $1" "$2" "$3}' | uniq )` 
 if [ -n $X ]; then
   if [ "$TEST1" = "$TEST2" ];then
     echo '[crabjob] Error: Job is DONE    --> Remove it First'
@@ -189,6 +191,7 @@ echo '# evt  : '$nevt
 echo 'evt/job: '$procevjob
 echo 'runsel : '$runselection
 echo 'GT     : '$globaltag
+echo 'sedpy  : '$sedpy
 echo 'dbs    : '$dbs_url_src
 if [ $iextraname = 1 ];then
   echo 'extnm  : '$extraname
@@ -307,7 +310,7 @@ fi
 
 psetfile=$otodir'/'$procname'__'$cmsswver$datain_parsed$extrantag'.py'
 fileout=$procname'__'$cmsswver$datain_parsed$extrantag'.root'
-mkpy -psetin $procpyfi -psetout $psetfile -filein $procoufi -fileout $fileout -globaltag $globaltag
+mkpy -psetin $procpyfi -psetout $psetfile -filein $procoufi -fileout $fileout -globaltag $globaltag -sed $sedpy
 if [ $?  -ne 0 ]; then
         exit -1
 fi
@@ -321,7 +324,7 @@ cfgfile=$otodir'/'$procname'__'$cmsswver$datain_parsed$extrantag'.cfg'
 CFGCMD=' -dbsin '$datain' -pset '$psetfile
 if [ ! $jsonfile = 'none' ];then
   cp $jsonfile $otodir
-  CFGCMD=$CFGCMD' -json '$jsonfile' -ljob 100 -tlumi -1'
+  CFGCMD=$CFGCMD' -json '$jsonfile' -ljob 400 -tlumi -1'
 #  CFGCMD=$CFGCMD' -json '$jsonfile' -njob 1 -tlumi 10'
 #  CFGCMD=$CFGCMD' -json '$jsonfile' -ljob 10 -tlumi 50'
 fi
@@ -410,6 +413,7 @@ fi
 #  pbscrab
 #fi
 
+exit -1
 crab -create -submit -cfg $cfgfile
 
 if [ $?  -ne 0 ]; then
