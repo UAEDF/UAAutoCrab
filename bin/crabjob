@@ -34,6 +34,7 @@ globaltag='undef'
 sedpy='undef'
 cebl=0
 caf=0
+lsf=0
 dbs_url_src='none'
 
 iextraname=0
@@ -63,6 +64,7 @@ for xopt in $* ; do
     -gt)    globaltag=$2 ; shift ; shift ;;
     -cebl)  cebl=1 ; ce_blacklist=$2 ; shift ; shift ;;
     -caf)   caf=1 ; shift ;;
+    -lsf)   lsf=1 ; shift ;;
     -extnm) iextraname=1 ; extraname=$2 ; shift ; shift ;;
     -sedpy) sedpy=$2 ; shift ; shift ;; 
   esac
@@ -368,6 +370,9 @@ if [ $caf = 1 ];then
   CFGCMD=$CFGCMD' -caf'
 fi
 
+if [ $lsf = 1 ];then
+  CFGCMD=$CFGCMD' -lsf'
+fi
  
 #echo cfgcmd : $CFGCMD
 
@@ -413,7 +418,6 @@ fi
 #  pbscrab
 #fi
 
-exit -1
 crab -create -submit -cfg $cfgfile
 
 if [ $?  -ne 0 ]; then

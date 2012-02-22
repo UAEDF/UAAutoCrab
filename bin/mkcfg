@@ -83,7 +83,7 @@ cebl=0
 
 #specific to caf submission
 caf=0
-
+lsf=0
 
 ###################
 ### GET options ###
@@ -117,6 +117,7 @@ for xopt in $* ; do
     -wliihe)wl_iihe=1 ; shift ;;
     -cebl)  cebl=1 ; ce_blacklist=$2 ; shift ; shift ;;
     -caf)   caf=1 ; shift ;;
+    -lsf)   lsf=1 ; shift ;;
   esac
 done
 
@@ -194,6 +195,14 @@ if [ $caf = 1 ];then
   scheduler=caf
   use_server=0
 fi
+
+#CERN LSF
+if [ $lsf = 1 ];then
+  storage_element=T2_CH_CERN
+  jobtype=cmssw
+  scheduler=lsf
+  use_server=0
+fi 
 
 
 ############################
