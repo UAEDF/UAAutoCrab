@@ -198,7 +198,7 @@ fi
 
 #CERN LSF
 if [ $lsf = 1 ];then
-  storage_element=T2_CH_CERN
+  #storage_element=T2_CH_CERN
   jobtype=cmssw
   scheduler=lsf
   use_server=0
