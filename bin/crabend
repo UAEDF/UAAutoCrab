@@ -23,6 +23,11 @@ username=`whoami`
 tmp_file='/tmp/ongocrabjob2.'$username
 tmp_fil2='/tmp/ongocrabjob3.'$username
 tmp_fil3='/tmp/ongocrabjob4.'$username
+if [ `uname -a | grep 'cern.ch' | wc -l` -eq 1 ];then
+  tmp_file='/tmp/'$USER'/ongocrabjob2.'$username
+  tmp_fil2='/tmp/'$USER'/ongocrabjob3.'$username
+  tmp_fil3='/tmp/'$USER'/ongocrabjob4.'$username
+fi
 touch $tmp_file
 touch $tmp_fil2
 touch $tmp_fil3
@@ -58,7 +63,7 @@ for jobtmp in $jobs ; do
   type=`(echo $jobtmp | awk -F':' '{print $2}')` 
 
   rm $tmp_file
-  rm $tmp_fil2
+  cp /dev/null $tmp_fil2
 
   ####### GET JOB STATUS ######### 
   
