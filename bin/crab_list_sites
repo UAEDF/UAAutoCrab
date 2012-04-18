@@ -1,0 +1,207 @@
+#!/bin/bash
+
+
+if [ $# -ne 1 ];then
+  echo -e "Usage:\n  crab_list_sites PATH/TO/CRAB/UI/DIR" ; exit 0;
+fi
+
+if [ ! -d $1 ];then echo "Directory $1 can't be found." ; exit 0 ; fi
+
+
+
+parse_status(){
+
+  cat $stat_file |grep Aborted > $tmp_file1
+  cat $stat_file |grep Cancelled >> $tmp_file1
+  cat $stat_file |grep Ready >> $tmp_file1
+  cat $stat_file |grep Done >> $tmp_file1
+  cat $stat_file |grep Retrieved >> $tmp_file1
+  cat $stat_file |grep Scheduled >> $tmp_file1
+  cat $stat_file |grep Running >> $tmp_file1
+  cat $stat_file |grep Submitted >> $tmp_file1
+  cat $stat_file |grep Submitting >> $tmp_file1
+  cat $tmp_file1 |grep -v -e ">>>"  |grep -v -e "List of jobs" > $tmp_file2
+  mv $tmp_file2 $tmp_file1
+
+  if [ `cat $tmp_file1|wc -l` -eq 0 ];then cat $stat_file; exit ;fi
+
+  echo
+  echo "---------------------------------------------------------------------------------------------------------------------------------"
+  printf "%-33s %-12s %-10s %-8s %-12s %-10s %-10s %-8s %-12s %s \n" "Site" "Submitted" "Cancelled" "ready" "scheduled" "running" "aborted" "done" "retrieved" "total"
+  echo "---------------------------------------------------------------------------------------------------------------------------------"
+
+  tot_running=0
+  tot_aborted=0
+  tot_cancelled=0
+  tot_ready=0
+  tot_done=0
+  tot_retrieved=0
+  tot_scheduled=0
+  tot_submitted=0
+  tot_tot=0
+
+  blacklist=""
+  while [ `cat $tmp_file1|wc -l` -gt 0 ];do
+    current=`head -n 1 $tmp_file1|awk '{print $5}'`
+    #echo $current
+
+    cat $tmp_file1|grep -v -e "$current" > $tmp_file2
+    n_running=`cat $tmp_file1|grep -e "$current"|grep Running|wc -l`
+    n_aborted=`cat $tmp_file1|grep -e "$current"|grep Aborted|wc -l`
+    n_cancelled=`cat $tmp_file1|grep -e "$current"|grep Cancelled|wc -l`
+    n_ready=`cat $tmp_file1|grep -e "$current"|grep Ready|wc -l`
+    n_done=`cat $tmp_file1|grep -e "$current"|grep Done|wc -l`
+    n_retrieved=`cat $tmp_file1|grep -e "$current"|grep Retrieved|wc -l`
+    n_scheduled=`cat $tmp_file1|grep -e "$current"|grep Scheduled|wc -l`
+    n_submitted=`cat $tmp_file1|grep -e "$current"|grep -e "Submitted" -e "Submitting"|wc -l`
+    n_tot=`expr $n_submitted + $n_cancelled + $n_ready + $n_scheduled + $n_running + $n_aborted + $n_done + $n_retrieved`
+  
+    r_aborted=`echo "scale=2;$n_aborted/$n_tot" |bc -l`
+    if [ `echo "$r_aborted>0.5"|bc` -eq 1 ];then
+      blacklist="$blacklist,$current"
+    fi
+  
+  
+    tot_running=`expr $tot_running + $n_running`
+    tot_aborted=`expr $tot_aborted + $n_aborted`
+    tot_cancelled=`expr $tot_cancelled + $n_cancelled`
+    tot_ready=`expr $tot_ready + $n_ready`
+    tot_done=`expr $tot_done + $n_done`
+    tot_retrieved=`expr $tot_retrieved + $n_retrieved`
+    tot_scheduled=`expr $tot_scheduled + $n_scheduled`
+    tot_submitted=`expr $tot_submitted + $n_submitted`
+    tot_tot=`expr $tot_tot + $n_tot`
+
+  
+    printf "%-37s %-11s %-9s %-10s %-10s %-10s %-10s %-10s %-10s %s \n" "$current" "$n_submitted" "$n_cancelled" "$n_ready" "$n_scheduled" "$n_running" "$n_aborted" "$n_done" "$n_retrieved" "$n_tot"  
+  
+    #cat crab_rest
+    mv $tmp_file2 $tmp_file1
+  done
+
+  echo "---------------------------------------------------------------------------------------------------------------------------------"
+  printf "%-33s %-3s %-11s %-9s %-10s %-10s %-10s %-10s %-10s %-10s %s \n" "" "=" "$tot_submitted" "$tot_cancelled" "$tot_ready" "$tot_scheduled" "$tot_running" "$tot_aborted" "$tot_done" "$tot_retrieved" "$tot_tot"  
+  echo
+
+  blacklist=`echo ce_black_list=$blacklist|sed 's#=,#=#'|sed 's# ##g'`
+  if [ "$blacklist" != "ce_black_list=" ];then echo -e "You should add the following line in the [GRID] section:\n$blacklist\nto `pwd`/share/crab.cfg\n";fi
+
+
+  cat $stat_file|grep -e ">>>" -e "List of jobs"
+  
+  
+  #canceled jobs:
+  cancelled_jobs=`cat $crab_status_output|grep "Cancelled"|awk '{print $1}'` 
+  cancelled_jobs=`echo $cancelled_jobs|sed 's: :,:g'`
+  echo -e "\nCommands to run:"
+  if [ "$cancelled_jobs" != "" ];then
+    echo "  crab -forceResubmit $cancelled_jobs"
+  fi
+
+  if [ -d $t2dir ];then list; fi
+
+}
+
+list(){
+
+list_done=`cat $crab_status_output|sed -n -e '/Jobs Done/,+3p'|grep "List of jobs:"|sed 's/.*: //'`
+
+#echo "file_pattern: $file_pattern"
+#echo "t2dir: $t2dir"
+#echo "list_done: $list_done"
+
+files=""
+for file in `ls $t2dir`;do
+  file=`echo $file|sed "s#$file_pattern##"|sed 's#_.*##'`
+  files="$files $file"
+  #echo $file
+done
+#echo $files
+#exit
+
+make_list
+
+list_to_resubmit=""
+list_to_getoutput=""
+for n1 in $list_done_new;do
+  found=0
+  for n2 in $files;do
+    #echo "n1,n2: $n1,$n2"
+    if [ $n1 -eq $n2 ];then
+      list_to_getoutput="$list_to_getoutput,$n1"
+      found=1
+      break
+    fi  
+  done
+  if [ $found -eq 0 ];then
+    list_to_resubmit="$list_to_resubmit,$n1"
+  fi  
+done
+
+
+if [ "$list_to_resubmit" != "" ];then
+  echo "  crab -forceResubmit $list_to_resubmit"|sed 's#forceResubmit ,#forceResubmit #'
+fi
+if [ "$list_to_getoutput" != "" ];then
+  echo "  crab -getoutput $list_to_getoutput"|sed 's#getoutput ,#getoutput #'
+fi
+
+}
+
+make_list(){
+  list_done_new=""
+  list_done=`echo $list_done|sed 's#,# #g'`
+  #echo $list_done
+  for n in $list_done;do
+    n=`echo $n|sed 's#-# #'`
+    if [ `n_el $n` -gt 1 ];then
+      list_done_new="$list_done_new `seq $n`"
+    else
+      list_done_new="$list_done_new $n"
+    fi
+  done
+  #echo $list_done_new
+
+}
+
+n_el(){
+  echo $#
+}
+
+
+
+cd $1
+uidir=`pwd`
+stat_file=$uidir/crab_status_output
+crab_status_output=$stat_file
+crab_cfg=$uidir/share/crab.cfg
+tmp_file1=crab_temp
+tmp_file2=crab_temp2
+pnfs_base_dir=/pnfs/iihe/cms/store/user/$USER/
+user_remote_dir=`cat $crab_cfg|sed 's: ::g'|grep "user_remote_dir="|awk -F'=' '{print $2}'`
+  
+if [ "`cat $crab_cfg|sed 's# ##g'|grep 'publish_data='|sed 's#publish_data=##g'`" == "1" ];then
+  publish_dir=`cat $crab_cfg|grep 'publish_data_name'|sed 's# ##g'|sed 's#publish_data_name=##g'`
+  t2dir=$pnfs_base_dir/$publish_dir/$publish_dir
+  t2dir=$t2dir/`ls $t2dir`
+else
+  t2dir=$pnfs_base_dir/$user_remote_dir
+fi
+file_pattern=`cat $crab_cfg|sed 's# ##g'|grep 'output_file'|sed 's#output_file=##g'`
+file_pattern="${file_pattern%.root}_"
+
+
+echo "uidir: $uidir"
+echo "t2dir: $t2dir"
+#echo "file_pattern: $file_pattern"
+
+crab -status -c $uidir > $stat_file 2>&1
+#cat $stat_file
+
+
+
+parse_status
+
+
+
+
