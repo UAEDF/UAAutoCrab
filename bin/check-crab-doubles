@@ -1,0 +1,104 @@
+#!/bin/bash
+
+Usage(){
+echo '
+  Usage:   
+    check-crab-doubles
+
+Will provide with a list of doubles when jobs have been resubmitted frequently. Based on crab job number.
+      
+    Options:
+          -dir <DIR>: [OPTIONAL] directory were to check doubles. If not specified, using current one
+	  -last:  [OPTIONAL] (default) will suggest to keep last file arrived, and remove others
+	  -first: [OPTIONAL] will suggest to keep last file arrived, and remove others
+	  -size:  [OPTIONAL] will suggest to keep last file arrived, and remove others
+          -help/h: will display this help.
+'
+
+exit 1
+}
+
+get_pattern(){
+  pattern="echo `ls $dir`"
+  pattern=`echo $pattern|awk '{print $2}' |sed "s:[0-9]*_[0-9]_...\.root::"`
+
+  echo -e "pattern: $pattern\n"
+}
+
+get_list_of_jobs(){
+  list_of_jobs=`ls $dir|sed "s:${pattern}\([0-9]*\)_.*:\1:"`
+  #list_of_jobs=`echo $list_of_jobs |sed "s:${pattern}\([0-9]*\)_.*:\1:"`
+  #list_of_jobs=`echo $list_of_jobs |sed "s:${pattern}::g"|sed "s:_.*\.root::g"`
+  
+  #echo "list of jobs: $list_of_jobs"
+}
+
+
+get_doubles(){
+  files_to_remove=""
+  doubles=`echo -e "$list_of_jobs"|uniq -c|sed 's: *\([0-9]*\) \([0-9]*\):\1#\2:'`
+  for job in $doubles;do
+    nDouble=`echo $job|awk -F'#' '{print $1}'`
+    iJob=`echo $job|awk -F'#' '{print $2}'`
+    
+      #echo "Found $nDouble for job $iJob:"
+    
+    if [ $nDouble -gt 1 ];then
+      echo "Found $nDouble for job $iJob:"
+      ls ${pattern}$iJob* -l|sed 's:\(.*\):    \1:'
+      echo
+      
+      add_files_to_remove_list      
+      
+    fi
+  done
+  
+  echo -ne "\nFiles to remove:  "
+  if [ $keep_first -eq 1 ];then echo "(keeping first arrived)"
+  elif [ $keep_biggest -eq 1 ];then echo "(keeping biggest)"
+  else echo "(keeping last arrived)"; fi
+  
+  for file in $files_to_remove;do
+    echo "  rm -f $file"  
+  done
+  if [ "$files_to_remove" == "" ];then echo "     NOTHING TO REMOVE !"; fi
+}
+
+add_files_to_remove_list(){
+  files=`ls ${pattern}$iJob* -t`
+  first=`ls ${pattern}$iJob* -tr|sed '2,$d'`
+  last=`ls ${pattern}$iJob* -t|sed '2,$d'`
+  biggest=`ls ${pattern}$iJob* -S|sed '2,$d'`
+  
+  if [ $keep_first -eq 1 ];then
+    files_to_remove="$files_to_remove "`echo $files|sed "s:$first::"`
+  elif [ $keep_biggest -eq 1 ];then
+    files_to_remove="$files_to_remove "`echo $files|sed "s:$biggest::"`
+  else
+    files_to_remove="$files_to_remove "`echo $files|sed "s:$last::"`
+  fi
+}
+
+
+dir="`pwd`"
+keep_last=0
+keep_first=0
+keep_biggest=0
+
+for arg in $* ; do
+  case $arg in
+    -dir)             dir=$2    ; shift  ; shift;;
+    -last)            keep_last=1    ; shift ;;
+    -first)           keep_first=1    ; shift ;;
+    -size)            keep_biggest=1    ; shift ;;
+    -help)     	      Usage ;;
+    -h)        	      Usage ;;
+  esac
+done
+
+cd $dir
+dir=`pwd`
+echo -e "\ndir: $dir"
+get_pattern
+get_list_of_jobs
+get_doubles
