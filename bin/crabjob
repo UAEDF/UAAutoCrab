@@ -312,6 +312,13 @@ fi
 
 psetfile=$otodir'/'$procname'__'$cmsswver$datain_parsed$extrantag'.py'
 fileout=$procname'__'$cmsswver$datain_parsed$extrantag'.root'
+if [ `echo $fileout|wc -m` -gt 180 ];then
+  fileout=$datain_parsed$extrantag'.root'
+fi
+if [ `echo $fileout|wc -m` -gt 180 ];then
+  fileout=$procname'__'$cmsswver'__'$extrantag'.root'
+fi
+
 mkpy -psetin $procpyfi -psetout $psetfile -filein $procoufi -fileout $fileout -globaltag $globaltag -sed $sedpy
 if [ $?  -ne 0 ]; then
         exit -1
@@ -326,7 +333,7 @@ cfgfile=$otodir'/'$procname'__'$cmsswver$datain_parsed$extrantag'.cfg'
 CFGCMD=' -dbsin '$datain' -pset '$psetfile
 if [ ! $jsonfile = 'none' ];then
   cp $jsonfile $otodir
-  CFGCMD=$CFGCMD' -json '$jsonfile' -ljob 400 -tlumi -1'
+  CFGCMD=$CFGCMD' -json '$jsonfile' -ljob 200 -tlumi -1'
 #  CFGCMD=$CFGCMD' -json '$jsonfile' -njob 1 -tlumi 10'
 #  CFGCMD=$CFGCMD' -json '$jsonfile' -ljob 10 -tlumi 50'
 fi
@@ -384,14 +391,22 @@ else
   if [ `uname -a | grep 'iihe.ac.be' | wc -l` -eq 1 ];then
     echo "Setting iihe environment"
     source $VO_CMS_SW_DIR/cmsset_default.sh
-    #source /user/cmssoft/crab/latest/crab.sh
-    source /user/cmssoft/crab/CRAB_2_7_7_patch1/crab.sh
+    source /user/cmssoft/crab/latest/crab.sh
+    #source /user/cmssoft/crab/CRAB_2_7_7_patch1/crab.sh
   else
     echo "Warning , don't know were you are, crab and correct cms environment will need to be correct before starting crabjob."
   fi
 fi
 
 cd $procdir
+if [ `echo $cmsswver|sed 's:CMSSW_::'|sed 's:_::g'` -gt 400 ];then
+  echo "WARNING !!!!!!!!   Setting SCRAM_ARCH to slc5_amd64_gcc434 !!"
+  export SCRAM_ARCH=slc5_amd64_gcc434
+else
+  echo "WARNING !!!!!!!!   Setting SCRAM_ARCH to slc5_ia32_gcc434 !!"
+  export SCRAM_ARCH=slc5_ia32_gcc434
+fi
+
 eval `scramv1 runtime -sh` # = cmsenv , but compatible with lxplus  
 
 cd $workdir
