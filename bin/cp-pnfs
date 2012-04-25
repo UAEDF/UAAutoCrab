@@ -1,0 +1,55 @@
+#!/bin/bash
+
+indir=''
+outdir=''
+n_files_to_copy=75
+
+if [ $# -ne 1 ] && [ $# -ne 2 ];then
+  echo "[cp-pnfs] not enough or too many arguments. Usage:"
+  echo "cp-pnfs FROM [TO]"
+  echo "    FROM : pnfs or local  dir or file. If [TO] is not specified, exact dir will be created on the other side."
+  echo "    TO (optional): pnfs or local  dir or file to put the dir/file"
+  exit
+fi
+
+n_el(){
+  echo $#
+}
+
+indir="$1"
+
+if [ $# -eq 1 ];then
+  outdir=`pwd`/`echo $1|sed "s:^.*/$USER/::"`
+else
+  outdir=`ls -d $2`
+fi
+
+echo "indir  : $indir"
+echo "outdir : $outdir"
+
+list_of_files=( '' )
+if [ -d $1 ];then
+  list_of_files=( `ls -d $indir/*` )
+else
+  list_of_files=( `ls -d $1` )
+fi
+
+if [ ! -d $outdir ];then mkdir -p $outdir ; fi
+
+
+i=0
+echo "Total number of files in indir: `n_el ${list_of_files[@]}`"
+echo "Total number of files to be copied: $n_files_to_copy"
+for file in ${list_of_files[@]};do
+  i=`expr $i + 1`
+  if [ $i -gt $n_files_to_copy ] && [ $i -gt 0 ];then break; fi
+
+  echo -e "\n------------------------------------------------------------------------"
+  outfile=$(echo "$outdir/"`echo $file|sed "s:^.*/::"`)
+  echo "Copying -->  $file"
+  echo "   To   -->  $outfile"
+  echo -e "dccp $file $outfile \n"
+  dccp $file $outdir/`echo $file|sed "s:^.*/::"`
+  echo -e "------------------------------------------------------------------------ \n"
+done
+
