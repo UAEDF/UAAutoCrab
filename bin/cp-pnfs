@@ -2,7 +2,7 @@
 
 indir=''
 outdir=''
-n_files_to_copy=75
+n_files_to_copy=999999
 
 if [ $# -ne 1 ] && [ $# -ne 2 ];then
   echo "[cp-pnfs] not enough or too many arguments. Usage:"
